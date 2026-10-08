@@ -1,0 +1,143 @@
+---
+name: setup
+description: 새 React/Next.js/React Native 프로젝트에 cony 하네스를 깐다. CLAUDE.md 뼈대, .claude/CONVENTIONS.md, ESLint/Prettier(@conychoi 공용 config), husky + lint-staged, 권한 허용 목록, .cony/ 작업 공간. 사용자가 "프로젝트 세팅", "하네스 깔아줘", "코니 세팅", "/cony:setup" 등으로 요청할 때 사용.
+---
+
+# cony 프로젝트 세팅
+
+에이전트가 앞서나가지 못하게 하는 장치를 먼저 까는 단계다. 원칙을 `CLAUDE.md`에 적고, 컨벤션을 문서로 두고, 커밋 전 검사를 자동화한다.
+
+## 0. 현황 확인
+
+- 패키지 매니저(lockfile), 프레임워크, 이미 있는 lint/format/hook 설정을 확인한다.
+- 바꿀 것과 지울 것(예: 스캐폴드에 딸려온 oxlint)을 목록으로 보여주고 사용자 확인을 받은 뒤 진행한다.
+
+## 1. 컨벤션 문서
+
+이 스킬 디렉토리의 `CONVENTIONS.md`를 프로젝트의 `.claude/CONVENTIONS.md`로 복사한다. 이미 있으면 덮어쓰지 말고 차이를 보여준다.
+
+## 2. CLAUDE.md
+
+아래 뼈대로 만든다. **"제약" 섹션은 비워두고 사용자에게 묻는다.** 아직 정하지 않은 구조나 가정을 규칙처럼 적지 않는다. 지침 파일은 이후 모든 판단의 근거가 되므로 사람이 정한 내용만 들어간다.
+
+````markdown
+# {프로젝트 이름}
+
+## 작업 원칙
+
+- 해결책을 설계하기 전에, 이미 자리 잡은 제품들이 같은 문제를 어떻게 푸는지 먼저 살펴본다.
+  접근 방식을 처음부터 발명하지 말고 검증된 패턴과 관례를 채택한다.
+- 하위 호환을 유지하지 않는다. 호환 레이어·폴백·마이그레이션을 덧붙이는 대신 쓰이지 않는 경로를 삭제한다.
+- 현재 요구사항을 완전히 충족하는 가장 단순한 구현을 선택한다. 추측에 근거한 추상화, 설정값, 간접 계층을 만들지 않는다.
+- 시스템은 레이어로 키운다. 엔드투엔드로 동작하는 최소 버전에서 시작하고, 이미 동작하는 결과물 위에 기능을 하나씩 얹는다.
+  동작하는 코드를 미완성 복잡도와 맞바꾸지 않는다.
+- 컴포넌트는 모듈로 분리하고 관심사를 명확히 나눈다.
+- 검증되고 유지보수되는 라이브러리가 전체 복잡도를 낮추거나 안정성을 높인다면 그것을 쓴다.
+  흔한 기능을 명확한 이유 없이 재구현하지 않는다.
+- 직접 구현하거나 패키지를 추가하기 전에 이미 설치된 의존성부터 확인한다.
+  문서와 타입을 확인하지 않은 채 "이 라이브러리엔 그 기능이 없다"고 단정하지 않는다.
+- 아키텍처 결정은 장기 관점으로 한다. 지금만 넘기고 나중에 교체할 임시방편을 받아들이지 않는다.
+
+## 코드 규칙
+
+공통 FE 규칙(디렉토리 구조 · API 호출 · 네이밍 · 주석)은 아래 문서를 따른다.
+
+@.claude/CONVENTIONS.md
+
+## 제약
+
+(사용자가 정한 프로젝트 고유 제약)
+
+## 검증
+
+작업을 마치기 전 아래를 모두 통과시킨다.
+
+```bash
+{pm} lint
+{pm} format:check
+{pm} test
+{pm} build
+```
+````
+
+`{pm}`은 프로젝트 패키지 매니저로 바꾸고, 없는 스크립트는 4단계에서 추가한다.
+
+## 3. ESLint + Prettier
+
+- `@conychoi/eslint-config`, `@conychoi/prettier-config`를 설치한다. 로컬 버전이 아니라 npm 배포본을 쓴다(저장소를 받은 사람이 설치만으로 같은 결과를 얻도록).
+- `package.json`에 `"prettier": "@conychoi/prettier-config"`.
+- `eslint.config.mjs`:
+
+```js
+import reactConfig from "@conychoi/eslint-config/react";
+
+export default [
+  ...reactConfig,
+  { ignores: ["dist/**"] },
+  // 공용 config 는 프로젝트마다 다른 경로 alias 를 알지 못한다.
+  // 알려주지 않으면 @/ 가 외부 패키지로 분류되어 import 순서가 컨벤션과 어긋난다.
+  { settings: { "import/internal-regex": "^@/" } },
+];
+```
+
+Next.js면 `eslint-config-next`를 함께 spread한다. 빌드 산출물 디렉토리(`.next`, `dist` 등)를 ignores에 맞춘다.
+
+## 4. scripts
+
+```json
+{
+  "lint": "eslint .",
+  "lint:fix": "eslint . --fix",
+  "format": "prettier --write .",
+  "format:check": "prettier --check ."
+}
+```
+
+테스트 러너가 없으면 무엇을 쓸지(Vite면 vitest, 그 외 jest 등) 사용자에게 묻는다.
+
+## 5. husky + lint-staged
+
+커밋 전에 lint와 format이 자동으로 돌게 한다. 에이전트 기반 개발에서 리뷰 비용을 줄이는 장치다.
+
+```json
+"lint-staged": {
+  "*.{ts,tsx}": ["eslint --no-warn-ignored --cache --fix", "prettier --write"],
+  "*.{json,md,css,html}": ["prettier --write"]
+}
+```
+
+`.husky/pre-commit`: `{pm} exec lint-staged`
+
+## 6. 권한 허용 목록
+
+팀이 자율로 일하는 동안 검증 명령마다 권한 확인 창이 뜨지 않게, `.claude/settings.json`에 허용 목록을 둔다. 이미 있으면 `permissions.allow`에 합친다. `{pm}`은 패키지 매니저로 바꾼다.
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash({pm} lint:*)",
+      "Bash({pm} format:*)",
+      "Bash({pm} test:*)",
+      "Bash({pm} build:*)",
+      "Bash({pm} exec:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}
+```
+
+## 7. 하네스 켜기
+
+**이 단계는 반드시 마지막에 한다.** `.cony/`가 생기는 순간 지침 파일 보호 hook이 켜져서, 그 뒤로는 `CLAUDE.md`와 `.claude/` 수정에 사용자 승인이 필요하다.
+
+- `.cony/` 디렉토리를 만들고 `board.md`에 "대기 중" 한 줄을 쓴다.
+- `.gitignore`에 `.cony/.cache/`를 추가한다.
+- `.cony/`의 나머지(스펙, 결정 기록, 작업 기록, 보고서)를 커밋에 포함할지 사용자에게 묻는다. 결정 기록이 남으면 나중에 "왜 이렇게 했지"를 추적할 수 있어서 포함을 추천한다.
+
+## 8. 마무리
+
+- 검증 명령을 한 번 돌려 통과를 확인한다.
+- 커밋 단위를 제안한다: lint/format 설정, husky, CLAUDE.md + CONVENTIONS.md, 권한 설정 + .cony는 각각 다른 커밋. 커밋은 사용자가 요청할 때만 한다.

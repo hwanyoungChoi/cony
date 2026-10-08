@@ -1,0 +1,17 @@
+{
+  "name": "conychoi-plugins",
+  "owner": {
+    "name": "HwanyoungChoi",
+    "email": "me@conychoi.dev"
+  },
+  "metadata": {
+    "description": "conychoi 개인 Claude Code 플러그인 모음"
+  },
+  "plugins": [
+    {
+      "name": "cony",
+      "source": "./plugins/cony",
+      "description": "기획 / 클라이언트 / 백엔드 / 테스트 4인 에이전트 팀과 팀 실행 스킬"
+    }
+  ]
+}
