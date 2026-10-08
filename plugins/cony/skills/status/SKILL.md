@@ -14,6 +14,7 @@ description: cony 팀의 진행 상황을 중간보고한다. 사용자가 "진�
    - `.cony/decisions/`의 최근 결정 3개
    - `.cony/log.md`의 마지막 태스크 항목
    - `git status --short`와 `git diff --stat`
+   - board에 PR 링크가 있으면 `gh pr view {링크} --json state,mergedAt` 과 `gh pr checks {링크}`
 3. 보고한다.
 
 ## 보고 형식
@@ -27,6 +28,7 @@ description: cony 팀의 진행 상황을 중간보고한다. 사용자가 "진�
 확인 필요: {사용자 확인 필요 항목 또는 "없음"}
 막힌 것: {없으면 "없음"}
 변경 중인 파일: {diff stat 요약}
+PR: {링크} · CI {통과/진행 중/실패} · {열림/머지됨}
 ```
 
 - 마지막 업데이트가 30분 넘게 지났는데 상태가 "진행 중"이면, 리드 세션이 멈췄을 수 있다고 알린다.

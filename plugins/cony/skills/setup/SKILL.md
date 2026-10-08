@@ -108,9 +108,44 @@ Next.js면 `eslint-config-next`를 함께 spread한다. 빌드 산출물 디렉�
 
 `.husky/pre-commit`: `{pm} exec lint-staged`
 
-## 6. 권한 허용 목록
+## 6. CI
 
-팀이 자율로 일하는 동안 검증 명령마다 권한 확인 창이 뜨지 않게, `.claude/settings.json`에 허용 목록을 둔다. 이미 있으면 `permissions.allow`에 합친다. `{pm}`은 패키지 매니저로 바꾼다.
+`/cony:team`은 CI가 모두 통과한 PR만 자동으로 머지한다. CI가 없으면 머지할 수 없으므로 GitHub Actions 워크플로를 만든다. 이미 있으면 검증 명령이 모두 들어 있는지만 확인한다.
+
+`.github/workflows/ci.yml` (pnpm 기준, 다른 패키지 매니저면 설치 단계를 바꾼다):
+
+```yaml
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm test
+      - run: pnpm build
+```
+
+- `.nvmrc`가 없으면 로컬 Node 버전으로 만든다. `pnpm/action-setup`은 `package.json`의 `packageManager` 필드를 읽으므로 없으면 추가한다.
+- `gh repo edit --delete-branch-on-merge`로 머지된 작업 브랜치가 자동으로 지워지게 한다.
+- 개인 계정의 private 저장소는 무료 플랜에서 브랜치 보호(필수 체크)를 쓸 수 없다. 그래도 cony hook이 `gh pr merge` 직전에 CI 결과를 확인해서 통과하지 않은 PR의 머지를 막는다.
+
+## 7. 권한 허용 목록
+
+팀이 자율로 일하는 동안 검증, 커밋, push, PR 명령마다 권한 확인 창이 뜨지 않게, `.claude/settings.json`에 허용 목록을 둔다. 이미 있으면 `permissions.allow`에 합친다. `{pm}`은 패키지 매니저로 바꾼다.
 
 ```json
 {
@@ -123,13 +158,19 @@ Next.js면 `eslint-config-next`를 함께 spread한다. 빌드 산출물 디렉�
       "Bash({pm} exec:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(git switch:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh run:*)"
     ]
   }
 }
 ```
 
-## 7. 하네스 켜기
+## 8. 하네스 켜기
 
 **이 단계는 반드시 마지막에 한다.** `.cony/`가 생기는 순간 지침 파일 보호 hook이 켜져서, 그 뒤로는 `CLAUDE.md`와 `.claude/` 수정에 사용자 승인이 필요하다.
 
@@ -137,7 +178,7 @@ Next.js면 `eslint-config-next`를 함께 spread한다. 빌드 산출물 디렉�
 - `.gitignore`에 `.cony/.cache/`를 추가한다.
 - `.cony/`의 나머지(스펙, 결정 기록, 작업 기록, 보고서)를 커밋에 포함할지 사용자에게 묻는다. 결정 기록이 남으면 나중에 "왜 이렇게 했지"를 추적할 수 있어서 포함을 추천한다.
 
-## 8. 마무리
+## 9. 마무리
 
 - 검증 명령을 한 번 돌려 통과를 확인한다.
-- 커밋 단위를 제안한다: lint/format 설정, husky, CLAUDE.md + CONVENTIONS.md, 권한 설정 + .cony는 각각 다른 커밋. 커밋은 사용자가 요청할 때만 한다.
+- 커밋 단위를 제안한다: lint/format 설정, husky, CI, CLAUDE.md + CONVENTIONS.md, 권한 설정 + .cony는 각각 다른 커밋. 커밋은 사용자가 요청할 때만 한다.
