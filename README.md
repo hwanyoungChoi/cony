@@ -15,9 +15,10 @@ claude plugin install cony@conychoi-plugins
 /cony:setup                       # 새 프로젝트에 하네스 깔기 (한 번)
 /cony:team 프로필 사진 업로드 기능   # 목표만 주면 팀이 알아서 끝까지
 /cony:status                      # 언제든 중간보고 (다른 세션에서도 됨)
+/cony:board                       # 진행 상황을 브라우저 대시보드로 (실시간 갱신)
 ```
 
-진행 상황은 `.cony/board.md`를 직접 열어봐도 된다.
+`/cony:board`는 `.cony/`를 감시하는 로컬 서버(`localhost:4747`)를 띄운다. 리드가 `board.md`를 고치는 즉시 진행률, 확인 필요·막힌 것 배너, 결정 기록이 갱신된다. 이 컴퓨터에서만 열리므로 폰에서는 아래 Remote Control을 쓴다.
 
 ## 하네스 구성
 
