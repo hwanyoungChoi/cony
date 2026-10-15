@@ -1,13 +1,31 @@
 import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
 
-import { findConyRoot, output, readInput, truncate } from "./lib.mjs";
+import { expandHome, findConyRoot, output, readInput, rememberRoot, truncate } from "./lib.mjs";
 
 const PROTECTED_BRANCHES = new Set(["main", "master"]);
 
 const input = readInput();
 const command = input.tool_input?.command ?? "";
-const cwd = input.cwd ?? process.cwd();
-if (!command || !findConyRoot(cwd)) process.exit(0);
+const sessionCwd = input.cwd ?? process.cwd();
+if (!command) process.exit(0);
+
+// 세션을 연 폴더가 아니라 명령이 실제로 도는 위치(cd, git -C 대상)로 판단한다.
+function commandDirs() {
+  const dirs = [sessionCwd];
+  const pathArg = String.raw`("([^"]+)"|'([^']+)'|(\S+))`;
+  for (const pattern of [new RegExp(String.raw`(?:^|[;&|]\s*)cd\s+` + pathArg, "g"), new RegExp(String.raw`\bgit\s+-C\s+` + pathArg, "g")]) {
+    for (const m of command.matchAll(pattern)) dirs.push(m[2] ?? m[3] ?? m[4]);
+  }
+  return dirs.map((dir) => resolve(sessionCwd, expandHome(dir)));
+}
+
+const cwd = commandDirs().reverse().find((dir) => findConyRoot(dir));
+if (!cwd) process.exit(0);
+rememberRoot(input.session_id, findConyRoot(cwd));
+
+// "git -C 경로 push" 도 "git push" 와 같은 규칙에 걸리게 한다.
+const normalized = command.replace(/\bgit\s+-C\s+("[^"]+"|'[^']+'|\S+)\s+/g, "git ");
 
 function decide(permissionDecision, reason) {
   output({
@@ -64,10 +82,10 @@ const ASK = [
 ];
 
 for (const [pattern, reason] of DENY) {
-  if (pattern.test(command)) decide("deny", reason);
+  if (pattern.test(normalized)) decide("deny", reason);
 }
 
-for (const match of command.matchAll(/\bgit\s+push\b([^;&|]*)/g)) {
+for (const match of normalized.matchAll(/\bgit\s+push\b([^;&|]*)/g)) {
   const targets = pushTargets(match[1]);
   if (!targets || targets.some((t) => !t || PROTECTED_BRANCHES.has(t))) {
     decide("ask", "기본 브랜치로 직접 push하거나 대상 브랜치를 알 수 없습니다. 작업 브랜치에서 PR로 머지하세요. 사용자 확인이 필요합니다.");
@@ -75,7 +93,7 @@ for (const match of command.matchAll(/\bgit\s+push\b([^;&|]*)/g)) {
 }
 
 // auto-merge 정책: CI가 모두 통과한 PR만 머지할 수 있다.
-for (const match of command.matchAll(/\bgh\s+pr\s+merge\b([^;&|]*)/g)) {
+for (const match of normalized.matchAll(/\bgh\s+pr\s+merge\b([^;&|]*)/g)) {
   const selector = match[1].trim().split(/\s+/).find((t) => t && !t.startsWith("-"));
   try {
     execFileSync("gh", ["pr", "checks", ...(selector ? [selector] : [])], {
@@ -95,5 +113,5 @@ for (const match of command.matchAll(/\bgh\s+pr\s+merge\b([^;&|]*)/g)) {
 }
 
 for (const [pattern, reason] of ASK) {
-  if (pattern.test(command)) decide("ask", `${reason} 사용자 확인이 필요합니다.`);
+  if (pattern.test(normalized)) decide("ask", `${reason} 사용자 확인이 필요합니다.`);
 }

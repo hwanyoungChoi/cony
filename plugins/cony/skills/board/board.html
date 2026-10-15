@@ -65,6 +65,7 @@
   }
   .badge.done { background: var(--ok-soft); color: var(--ok); }
   .badge.waiting { background: var(--warn-soft); color: var(--warn); }
+  .badge.stopped { background: var(--danger-soft); color: var(--danger); }
 
   .progress { display: flex; align-items: center; gap: 12px; }
   .bar { flex: 1; height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; }
@@ -239,7 +240,7 @@
       document.getElementById("goal").textContent = goal || "(목표 없음)";
       const badge = document.getElementById("status");
       badge.textContent = status || "-";
-      badge.className = "badge" + (status.includes("완료") ? " done" : status.includes("대기") ? " waiting" : "");
+      badge.className = "badge" + (status.includes("완료") ? " done" : status.includes("중단") ? " stopped" : status.includes("대기") ? " waiting" : "");
     }
     document.title = `${status ? `[${status}] ` : ""}${goal || "cony board"}`;
 

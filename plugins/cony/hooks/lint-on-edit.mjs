@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { dirname } from "node:path";
 
-import { binPath, findConyRoot, findUp, output, readInput, truncate } from "./lib.mjs";
+import { binPath, findConyRoot, findUp, output, readInput, rememberRoot, truncate } from "./lib.mjs";
 
 const input = readInput();
 const filePath = input.tool_input?.file_path;
@@ -9,6 +9,7 @@ if (!filePath || !/\.(m?[jt]sx?|cjs)$/.test(filePath)) process.exit(0);
 
 const root = findConyRoot(dirname(filePath));
 if (!root) process.exit(0);
+rememberRoot(input.session_id, root);
 
 const pkgDir = findUp(dirname(filePath), "package.json", root);
 const eslint = pkgDir && binPath(pkgDir, "eslint");

@@ -89,11 +89,13 @@ Next.js면 `eslint-config-next`를 함께 spread한다. 빌드 산출물 디렉�
   "lint": "eslint .",
   "lint:fix": "eslint . --fix",
   "format": "prettier --write .",
-  "format:check": "prettier --check ."
+  "format:check": "prettier --check .",
+  "test": "vitest run --passWithNoTests"
 }
 ```
 
-테스트 러너가 없으면 무엇을 쓸지(Vite면 vitest, 그 외 jest 등) 사용자에게 묻는다.
+- 테스트 러너가 없으면 무엇을 쓸지(Vite면 vitest, 그 외 jest 등) 사용자에게 묻는다.
+- 새 프로젝트는 테스트 파일이 없어서 그냥 `vitest run`이면 실패한다. `--passWithNoTests`를 붙인다(jest도 같은 옵션이 있다).
 
 ## 5. husky + lint-staged
 
@@ -172,10 +174,10 @@ jobs:
 
 ## 8. 하네스 켜기
 
-**이 단계는 반드시 마지막에 한다.** `.cony/`가 생기는 순간 지침 파일 보호 hook이 켜져서, 그 뒤로는 `CLAUDE.md`와 `.claude/` 수정에 사용자 승인이 필요하다.
+**이 단계는 반드시 마지막에 한다.** `.cony/`가 생기는 순간 지침 파일 보호 hook이 켜져서, 그 뒤로는 Claude가 `CLAUDE.md`와 `.claude/`를 수정할 수 없다. 사용자가 직접 고쳐야 한다.
 
 - `.cony/` 디렉토리를 만들고 `board.md`에 "대기 중" 한 줄을 쓴다.
-- `.gitignore`에 `.cony/.cache/`를 추가한다.
+- `.gitignore`에 `.cony/.cache/`와 `.eslintcache`(lint-staged의 `--cache`가 만드는 파일)를 추가한다.
 - `.cony/`의 나머지(스펙, 결정 기록, 작업 기록, 보고서)를 커밋에 포함할지 사용자에게 묻는다. 결정 기록이 남으면 나중에 "왜 이렇게 했지"를 추적할 수 있어서 포함을 추천한다.
 
 ## 9. 마무리

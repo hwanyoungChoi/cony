@@ -1,5 +1,5 @@
 {
-  "description": "cony 하네스: 지침 파일 보호, 위험 명령 차단, 수정 즉시 lint, 종료 전 lint+typecheck, 세션 시작 시 보드 주입. .cony/ 가 있는 프로젝트에서만 동작한다.",
+  "description": "cony 하네스: 지침 파일 수정 차단, 위험 명령 차단, 수정 즉시 lint, 종료 전 lint+typecheck와 보드 상태 확인, 세션 시작 시 보드 주입, 세션 종료 시 보드를 '중단됨'으로 표시. .cony/ 가 있는 프로젝트에서만 동작한다.",
   "hooks": {
     "SessionStart": [
       {
@@ -53,6 +53,22 @@
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/verify-on-stop.mjs\"",
             "timeout": 600
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/board-on-stop.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/board-on-end.mjs\"",
+            "timeout": 10
           }
         ]
       }
