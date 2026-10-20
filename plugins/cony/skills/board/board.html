@@ -293,6 +293,7 @@
   }
 
   async function openFile(path) {
+    currentFile = path;
     const res = await fetch(`/file?path=${encodeURIComponent(path)}`);
     document.getElementById("viewer-body").innerHTML = res.ok
       ? renderMarkdown(await res.text())
@@ -302,14 +303,23 @@
 
   document.getElementById("close").addEventListener("click", () => document.getElementById("viewer").close());
 
-  document.getElementById("board").addEventListener("click", (event) => {
+  let currentFile = "";
+  function handleMarkdownLink(event) {
     const link = event.target.closest("a");
     const href = link && link.getAttribute("href");
-    if (href && href.endsWith(".md") && !/^[a-z]+:/i.test(href)) {
-      event.preventDefault();
-      openFile(href.replace(/^\.\//, "").replace(/^\.cony\//, ""));
+    if (!href || !href.endsWith(".md") || /^[a-z]+:/i.test(href)) return;
+    event.preventDefault();
+    // 모달 안 링크(../reviews/x.md)는 지금 연 파일 기준 상대 경로다
+    const from = event.currentTarget.id === "viewer-body" ? currentFile.split("/").slice(0, -1) : [];
+    const parts = [...from];
+    for (const part of href.replace(/^\.cony\//, "").split("/")) {
+      if (part === "..") parts.pop();
+      else if (part !== ".") parts.push(part);
     }
-  });
+    openFile(parts.join("/"));
+  }
+  document.getElementById("board").addEventListener("click", handleMarkdownLink);
+  document.getElementById("viewer-body").addEventListener("click", handleMarkdownLink);
 
   const live = document.getElementById("live");
   const liveText = document.getElementById("live-text");
