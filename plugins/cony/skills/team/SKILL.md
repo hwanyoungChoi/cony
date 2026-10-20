@@ -21,36 +21,34 @@ description: cony 에이전트 팀(planner, backend-dev, client-dev, tester)이 
 | `log.md` | 작업 기록 | 리드 |
 | `reports/{YYYY-MM-DD}-{feature}.md` | 최종 보고 | 리드 |
 
-### board.md 형식
+### board.md 갱신
 
-```markdown
-# {목표}
-> 상태: 진행 중 | 사용자 대기 | 완료 | 중단됨 · 마지막 업데이트: {YYYY-MM-DD HH:mm}
+보드는 직접 쓰지 않는다. 이 스킬 디렉토리의 `board.mjs`로 바꿀 부분만 갱신한다. 프로젝트 루트(또는 그 아래)에서 실행하고, 시각은 자동으로 기록된다.
 
-## 태스크
-- [x] 1. ...
-- [ ] 2. ... ← 진행 중 (client-dev)
+```bash
+# 기획이 끝나 스펙이 생기면 한 번
+node "{이 스킬 디렉토리}/board.mjs" --init --goal "계산기" --spec specs/calculator.md
 
-## 지금 하는 일
-한두 줄
-
-## 최근 결정
-- [ADR-003 제목](decisions/003-slug.md): 한 줄 요약
-
-## 사용자 확인 필요
-(없으면 "없음")
-
-## 막힌 것
-(없으면 "없음")
-
-## PR
-(링크 · CI 상태 · 머지 여부. 없으면 "아직 없음")
+# 이후 단계마다, 바뀐 것만 옵션으로
+node "{이 스킬 디렉토리}/board.mjs" --task 1=done --task 2=doing:client-dev --now "client-dev가 태스크 2 구현 중"
+node "{이 스킬 디렉토리}/board.mjs" --decision decisions/004-scope.md
+node "{이 스킬 디렉토리}/board.mjs" --status "사용자 대기" --attention "언매치 시 채팅 기록 처리" --blocked none
+node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 ```
+
+| 옵션 | 값 |
+|---|---|
+| `--status` | 진행 중 / 사용자 대기 / 완료 / 중단됨 |
+| `--task` | `N=done`, `N=doing[:담당]`, `N=todo`. done·todo는 스펙 체크박스에도 반영된다 |
+| `--now` | 지금 하는 일 한두 줄 |
+| `--decision` | ADR 파일 경로. 제목과 "결정" 줄을 읽어 최근 결정 맨 위에 추가 |
+| `--attention`, `--blocked` | 여러 번 주면 목록, `none`이면 "없음" |
+| `--pr` | PR 링크와 CI·머지 상태 |
 
 **board는 항상 최신이어야 한다.** 에이전트 호출이 끝날 때마다, 결정이 날 때마다 갱신한다. 사용자가 언제 열어봐도 지금 상태를 알 수 있어야 한다.
 
-- 턴을 끝내고 사용자에게 넘길 때는 상태를 "사용자 대기"나 "완료"로 바꾼다. "진행 중"인 채로 턴을 끝내려 하면 hook이 한 번 막는다.
-- 세션이 끝나면 hook이 "진행 중"을 "중단됨"으로 바꾼다. 이어서 할 때는 상태를 다시 "진행 중"으로 돌리고 시작한다.
+- 턴을 끝내고 사용자에게 넘길 때는 `--status "사용자 대기"`나 `"완료"`로 바꾼다. "진행 중"인 채로 턴을 끝내려 하면 hook이 한 번 막는다.
+- 세션이 끝나면 hook이 "진행 중"을 "중단됨"으로 바꾼다. 이어서 할 때는 `--status "진행 중"`으로 돌리고 시작한다.
 
 ## 리드의 원칙
 
@@ -98,7 +96,7 @@ description: cony 에이전트 팀(planner, backend-dev, client-dev, tester)이 
 1. `planner`에 목표를 전달해 스펙과 태스크를 받는다.
 2. **스펙 토론**: 스펙의 태스크 담당에 나오는 역할과 `tester`를 검토 모드로 병렬로 불러 스펙을 리뷰시킨다(실현 가능성, 계약 누락, 테스트 가능성, 범위). 태스크에 backend가 없으면 `backend-dev`는 부르지 않는다.
 3. 이견은 토론 프로토콜로 정리하고 planner가 스펙에 반영한다. planner의 "결정 필요" 항목도 토론으로 정한다.
-4. board를 만든다. 사용자 확인 없이 개발로 넘어간다.
+4. `board.mjs --init`으로 board를 만든다. 사용자 확인 없이 개발로 넘어간다.
 
 ### 2. 태스크 반복
 태스크마다 아래를 반복한다.
@@ -112,13 +110,13 @@ description: cony 에이전트 팀(planner, backend-dev, client-dev, tester)이 
 ### 3. PR과 머지
 1. 프로젝트 `CLAUDE.md`의 검증 명령을 모두 통과시킨다.
 2. `reports/`에 최종 보고서를 쓰고 커밋한 뒤 push한다.
-3. `gh pr create`로 PR을 만든다. 제목은 기능 이름, 본문은 최종 보고서 내용으로 채운다. board의 PR 섹션에 링크를 적는다.
+3. `gh pr create`로 PR을 만든다. 제목은 기능 이름, 본문은 최종 보고서 내용으로 채운다. `board.mjs --pr`로 링크를 적는다.
 4. `gh pr checks --watch`로 CI가 끝날 때까지 기다린다(오래 걸리면 백그라운드로 돌린다).
    - **CI 실패**: 실패 로그(`gh run view --log-failed`)를 읽고 담당 에이전트에게 넘겨 고친 뒤 새 커밋으로 push한다. 최대 2회. 그래도 실패하면 머지하지 않고 "막힌 것"에 올리고 알린다.
    - **기본 브랜치와 충돌**: 기본 브랜치를 작업 브랜치에 merge해서 해결하고 push한다. rebase와 force push는 쓰지 않는다.
    - **CI가 없음**: 머지하지 않는다. `/cony:setup`의 CI 단계가 필요하다고 알린다.
 5. 모든 체크가 통과하면 `gh pr merge --squash --delete-branch`로 머지한다. hook이 CI 결과를 다시 확인하고, 통과하지 않았으면 막는다.
-6. 기본 브랜치로 돌아와 최신을 받고, board 상태를 "완료"로 바꾼다.
+6. 기본 브랜치로 돌아와 최신을 받고, `board.mjs --status 완료`로 바꾼다.
 7. 채팅으로 보고하고 알림을 보낸다.
 
 ## 알림

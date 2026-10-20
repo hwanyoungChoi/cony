@@ -75,7 +75,7 @@ Remote Control은 세션을 돌리는 컴퓨터가 켜져 있어야 한다. 잠�
 
 | 경로 | 내용 |
 |---|---|
-| `board.md` | 현황판. 리드가 단계마다 갱신 |
+| `board.md` | 현황판. 리드가 단계마다 `board.mjs`로 갱신 |
 | `specs/` | 스펙과 태스크 |
 | `decisions/` | 토론 기록 (ADR) |
 | `log.md` | 작업 기록 (`요청` / `토론` / `AI` / `되돌림` / `놓침`) |
@@ -84,8 +84,8 @@ Remote Control은 세션을 돌리는 컴퓨터가 켜져 있어야 한다. 잠�
 
 ## 개발
 
-hook을 고친 뒤에는 테스트를 돌린다. 실제 ESLint·tsc·gh 대신 가짜 실행 파일을 써서 의존성 없이 몇 초 만에 끝난다. push하면 GitHub Actions에서도 돈다.
+hook이나 보드 스크립트를 고친 뒤에는 테스트를 돌린다. 실제 ESLint·tsc·gh 대신 가짜 실행 파일을 써서 의존성 없이 몇 초 만에 끝난다. push하면 GitHub Actions에서도 돈다.
 
 ```bash
-node --test tests/hooks.test.mjs
+node --test tests/hooks.test.mjs tests/board.test.mjs
 ```
