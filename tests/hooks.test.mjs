@@ -1,0 +1,254 @@
+import assert from "node:assert/strict";
+import { execFileSync, spawnSync } from "node:child_process";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { after, describe, test } from "node:test";
+import { fileURLToPath } from "node:url";
+
+// 실제 eslint·tsc·gh 대신 가짜 실행 파일을 쓴다. 파일 내용에 LINT_ERROR·TYPE_ERROR가 있으면 실패한다.
+// hook의 판단 로직만 검증하므로 의존성 설치 없이 빠르게 돈다.
+
+const HOOKS = fileURLToPath(new URL("../plugins/cony/hooks/", import.meta.url));
+const base = mkdtempSync(join(tmpdir(), "cony-test-"));
+const fakeBin = join(base, "bin");
+const hookTmp = join(base, "tmp");
+mkdirSync(fakeBin);
+mkdirSync(hookTmp);
+after(() => rmSync(base, { recursive: true, force: true }));
+
+function writeExec(path, body) {
+  writeFileSync(path, `#!/usr/bin/env node\n${body}\n`);
+  chmodSync(path, 0o755);
+}
+
+writeExec(
+  join(fakeBin, "gh"),
+  `console.log("fake gh checks"); process.exit(Number(process.env.FAKE_GH_STATUS ?? 0));`,
+);
+
+function git(cwd, ...args) {
+  return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+}
+
+let projectCount = 0;
+function createProject({ cony = true } = {}) {
+  projectCount += 1;
+  const dir = join(base, `project-${projectCount}`);
+  mkdirSync(join(dir, "src"), { recursive: true });
+  mkdirSync(join(dir, "node_modules", ".bin"), { recursive: true });
+  if (cony) mkdirSync(join(dir, ".cony"));
+  writeFileSync(join(dir, "package.json"), '{ "name": "fixture" }\n');
+  writeFileSync(join(dir, "tsconfig.json"), "{}\n");
+  writeFileSync(join(dir, ".gitignore"), "node_modules\n.cony/.cache\n");
+  writeFileSync(join(dir, "src", "index.ts"), "export const a = 1;\n");
+  writeExec(
+    join(dir, "node_modules", ".bin", "eslint"),
+    `const fs = require("fs");
+const bad = process.argv.slice(2).filter((f) => !f.startsWith("-") && fs.readFileSync(f, "utf8").includes("LINT_ERROR"));
+if (bad.length) { console.log("lint error: " + bad.join(", ")); process.exit(1); }`,
+  );
+  writeExec(
+    join(dir, "node_modules", ".bin", "tsc"),
+    `const fs = require("fs"), path = require("path");
+const bad = fs.readdirSync("src").map((f) => path.join("src", f)).filter((f) => fs.readFileSync(f, "utf8").includes("TYPE_ERROR"));
+if (bad.length) { console.log("type error: " + bad.join(", ")); process.exit(2); }`,
+  );
+  git(dir, "init", "-q", "-b", "main");
+  git(dir, "-c", "user.name=t", "-c", "user.email=t@t", "add", "-A");
+  git(dir, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init");
+  return dir;
+}
+
+function writeBoard(dir, status) {
+  writeFileSync(
+    join(dir, ".cony", "board.md"),
+    `# 테스트\n> 상태: ${status} · 마지막 업데이트: 2026-10-20 10:00\n\n## 지금 하는 일\n테스트\n`,
+  );
+}
+
+function runHook(name, input, env = {}) {
+  const result = spawnSync("node", [join(HOOKS, name)], {
+    input: JSON.stringify(input),
+    encoding: "utf8",
+    env: { ...process.env, TMPDIR: hookTmp, PATH: `${fakeBin}:${process.env.PATH}`, ...env },
+  });
+  assert.equal(result.status, 0, `${name} 비정상 종료: ${result.stderr}`);
+  return result.stdout ? JSON.parse(result.stdout) : null;
+}
+
+function decisionOf(out) {
+  if (!out) return "allow";
+  return out.hookSpecificOutput?.permissionDecision ?? out.decision ?? (out.systemMessage ? "message" : "allow");
+}
+
+describe("guard-instructions: 지침 파일 보호", () => {
+  const project = createProject();
+  const outside = createProject({ cony: false });
+  const edit = (file) => decisionOf(runHook("guard-instructions.mjs", { tool_input: { file_path: file } }));
+
+  test("CLAUDE.md 수정은 차단", () => assert.equal(edit(join(project, "CLAUDE.md")), "deny"));
+  test(".claude/ 아래 수정은 차단", () => assert.equal(edit(join(project, ".claude", "CONVENTIONS.md")), "deny"));
+  test("일반 소스 파일은 허용", () => assert.equal(edit(join(project, "src", "index.ts")), "allow"));
+  test("cony 프로젝트가 아니면 관여하지 않음", () => assert.equal(edit(join(outside, "CLAUDE.md")), "allow"));
+});
+
+describe("guard-bash: 위험 명령", () => {
+  const project = createProject();
+  const outside = createProject({ cony: false });
+  const bash = (command, { cwd = project, env } = {}) =>
+    decisionOf(runHook("guard-bash.mjs", { cwd, tool_input: { command } }, env));
+
+  for (const command of [
+    "git commit --no-verify -m x",
+    "git commit --amend --no-edit",
+    "git push --force",
+    "git push -f origin feature",
+    "git push origin +feature",
+    "git push --force-with-lease",
+  ]) {
+    test(`차단: ${command}`, () => assert.equal(bash(command), "deny"));
+  }
+
+  for (const command of [
+    "git push origin main",
+    "git push origin feature:main",
+    "git push origin --delete feature",
+    "git reset --hard HEAD",
+    "git clean -fd",
+    "git checkout -- .",
+    "rm -rf src",
+    "psql -c 'DROP TABLE users'",
+    "pnpm prisma migrate reset",
+  ]) {
+    test(`승인 필요: ${command}`, () => assert.equal(bash(command), "ask"));
+  }
+
+  test("main 브랜치에서 대상 없이 push하면 승인 필요", () => assert.equal(bash("git push"), "ask"));
+
+  test("작업 브랜치 push는 허용", () => {
+    const branchProject = createProject();
+    git(branchProject, "switch", "-q", "-c", "cony/feature");
+    assert.equal(bash("git push", { cwd: branchProject }), "allow");
+    assert.equal(bash("git push -u origin HEAD", { cwd: branchProject }), "allow");
+  });
+
+  test("일반 명령은 허용", () => assert.equal(bash("git status && pnpm lint"), "allow"));
+  test("cony 프로젝트가 아니면 관여하지 않음", () =>
+    assert.equal(bash("git push --force", { cwd: outside }), "allow"));
+
+  test("다른 폴더에서 cd로 들어가도 적용", () =>
+    assert.equal(bash(`cd ${project} && git commit --amend`, { cwd: outside }), "deny"));
+  test("git -C 경로 형태도 적용", () =>
+    assert.equal(bash(`git -C ${project} push --force`, { cwd: outside }), "deny"));
+
+  test("CI 통과한 PR은 머지 허용", () =>
+    assert.equal(bash("gh pr merge 1 --squash", { env: { FAKE_GH_STATUS: "0" } }), "allow"));
+  test("CI 진행 중이면 머지 차단", () =>
+    assert.equal(bash("gh pr merge 1 --squash", { env: { FAKE_GH_STATUS: "8" } }), "deny"));
+  test("CI 실패면 머지 차단", () =>
+    assert.equal(bash("gh pr merge 1 --squash", { env: { FAKE_GH_STATUS: "1" } }), "deny"));
+});
+
+describe("lint-on-edit: 수정 즉시 lint", () => {
+  const project = createProject();
+  const outside = createProject({ cony: false });
+  const edited = (file, session_id = "lint") =>
+    decisionOf(runHook("lint-on-edit.mjs", { session_id, tool_input: { file_path: file } }));
+
+  test("lint 오류가 있으면 막고 알림", () => {
+    writeFileSync(join(project, "src", "bad.ts"), "// LINT_ERROR\n");
+    assert.equal(edited(join(project, "src", "bad.ts")), "block");
+  });
+  test("lint 통과면 통과", () => assert.equal(edited(join(project, "src", "index.ts")), "allow"));
+  test("코드 파일이 아니면 검사하지 않음", () => {
+    writeFileSync(join(project, "notes.md"), "LINT_ERROR\n");
+    assert.equal(edited(join(project, "notes.md")), "allow");
+  });
+  test("cony 프로젝트가 아니면 관여하지 않음", () => {
+    writeFileSync(join(outside, "src", "bad.ts"), "// LINT_ERROR\n");
+    assert.equal(edited(join(outside, "src", "bad.ts")), "allow");
+  });
+});
+
+describe("verify-on-stop: 종료 전 lint + typecheck", () => {
+  test("변경이 없으면 통과", () => {
+    const project = createProject();
+    assert.equal(decisionOf(runHook("verify-on-stop.mjs", { cwd: project })), "allow");
+  });
+
+  test("타입 오류가 있으면 3회까지 막고 그 뒤엔 경고만", () => {
+    const project = createProject();
+    writeFileSync(join(project, "src", "broken.ts"), "// TYPE_ERROR\n");
+    for (let i = 0; i < 3; i += 1) {
+      assert.equal(decisionOf(runHook("verify-on-stop.mjs", { cwd: project })), "block");
+    }
+    assert.equal(decisionOf(runHook("verify-on-stop.mjs", { cwd: project })), "message");
+  });
+
+  test("고치면 통과하고, 같은 내용은 다시 검사하지 않음", () => {
+    const project = createProject();
+    writeFileSync(join(project, "src", "broken.ts"), "// LINT_ERROR\n");
+    assert.equal(decisionOf(runHook("verify-on-stop.mjs", { cwd: project })), "block");
+    writeFileSync(join(project, "src", "broken.ts"), "export const fixed = 1;\n");
+    assert.equal(decisionOf(runHook("verify-on-stop.mjs", { cwd: project })), "allow");
+    const state = JSON.parse(readFileSync(join(project, ".cony", ".cache", "verify.json"), "utf8"));
+    assert.ok(state.passed);
+  });
+
+  test("세션 폴더가 달라도 이 세션이 수정한 프로젝트를 검사", () => {
+    const project = createProject();
+    const outside = createProject({ cony: false });
+    const file = join(project, "src", "broken.ts");
+    writeFileSync(file, "export const ok = 1;\n");
+    runHook("lint-on-edit.mjs", { session_id: "remember", tool_input: { file_path: file } });
+    writeFileSync(file, "// TYPE_ERROR\n");
+    assert.equal(decisionOf(runHook("verify-on-stop.mjs", { cwd: outside, session_id: "remember" })), "block");
+    assert.equal(decisionOf(runHook("verify-on-stop.mjs", { cwd: outside, session_id: "other" })), "allow");
+  });
+});
+
+describe("board-on-stop / board-on-end: 보드 상태", () => {
+  test("진행 중인 채로 턴을 끝내면 한 번 막음", () => {
+    const project = createProject();
+    writeBoard(project, "진행 중");
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project })), "block");
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, stop_hook_active: true })), "allow");
+  });
+
+  test("사용자 대기·완료면 통과", () => {
+    const project = createProject();
+    writeBoard(project, "사용자 대기");
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project })), "allow");
+    writeBoard(project, "완료");
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project })), "allow");
+  });
+
+  test("세션이 끝나면 진행 중을 중단됨으로 바꿈", () => {
+    const project = createProject();
+    writeBoard(project, "진행 중");
+    runHook("board-on-end.mjs", { cwd: project, session_id: "end" });
+    assert.match(readFileSync(join(project, ".cony", "board.md"), "utf8"), /상태: 중단됨/);
+  });
+
+  test("완료 상태는 건드리지 않음", () => {
+    const project = createProject();
+    writeBoard(project, "완료");
+    runHook("board-on-end.mjs", { cwd: project, session_id: "end2" });
+    assert.match(readFileSync(join(project, ".cony", "board.md"), "utf8"), /상태: 완료/);
+  });
+});
+
+describe("session-start: 보드 주입", () => {
+  test("cony 프로젝트면 보드 내용을 컨텍스트로 넣음", () => {
+    const project = createProject();
+    writeBoard(project, "진행 중");
+    const out = runHook("session-start.mjs", { cwd: project });
+    assert.match(out.hookSpecificOutput.additionalContext, /상태: 진행 중/);
+  });
+
+  test("cony 프로젝트가 아니면 아무것도 넣지 않음", () => {
+    const outside = createProject({ cony: false });
+    assert.equal(runHook("session-start.mjs", { cwd: outside }), null);
+  });
+});

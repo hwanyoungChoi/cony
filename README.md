@@ -81,3 +81,11 @@ Remote Control은 세션을 돌리는 컴퓨터가 켜져 있어야 한다. 잠�
 | `log.md` | 작업 기록 (`요청` / `토론` / `AI` / `되돌림` / `놓침`) |
 | `reports/` | 최종 보고서 |
 | `.cache/` | hook 상태 (gitignore) |
+
+## 개발
+
+hook을 고친 뒤에는 테스트를 돌린다. 실제 ESLint·tsc·gh 대신 가짜 실행 파일을 써서 의존성 없이 몇 초 만에 끝난다. push하면 GitHub Actions에서도 돈다.
+
+```bash
+node --test tests/hooks.test.mjs
+```
