@@ -64,30 +64,38 @@ export function expandHome(path) {
 
 // 세션을 연 폴더와 실제로 작업한 프로젝트가 다를 수 있어서,
 // 이 세션이 건드린 cony 프로젝트를 기억해 두고 Stop·SessionEnd 에서 함께 본다.
-function sessionFile(sessionId) {
-  return join(tmpdir(), "cony-hooks", `${String(sessionId).replace(/[^\w-]/g, "_")}.json`);
+// kind "touched": 파일을 고치거나 명령을 실행한 프로젝트 (종료 전 검증 대상)
+// kind "lead": 보드를 갱신한 프로젝트 (보드 hook 대상). 상태만 보는 세션은 여기에 들지 않는다.
+function sessionFile(sessionId, kind) {
+  const suffix = kind === "touched" ? "" : `.${kind}`;
+  return join(tmpdir(), "cony-hooks", `${String(sessionId).replace(/[^\w-]/g, "_")}${suffix}.json`);
 }
 
-export function rememberRoot(sessionId, root) {
+export function rememberRoot(sessionId, root, kind = "touched") {
   if (!sessionId || !root) return;
-  const roots = rememberedRoots(sessionId);
+  const roots = rememberedRoots(sessionId, kind);
   if (roots.includes(root)) return;
-  const file = sessionFile(sessionId);
+  const file = sessionFile(sessionId, kind);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, JSON.stringify([...roots, root]));
 }
 
-export function rememberedRoots(sessionId) {
+export function rememberedRoots(sessionId, kind = "touched") {
   if (!sessionId) return [];
   try {
-    return JSON.parse(readFileSync(sessionFile(sessionId), "utf8"));
+    return JSON.parse(readFileSync(sessionFile(sessionId, kind), "utf8"));
   } catch {
     return [];
   }
 }
 
+export function leadRoots(sessionId) {
+  return rememberedRoots(sessionId, "lead");
+}
+
 export function forgetSession(sessionId) {
-  if (sessionId) rmSync(sessionFile(sessionId), { force: true });
+  if (!sessionId) return;
+  for (const kind of ["touched", "lead"]) rmSync(sessionFile(sessionId, kind), { force: true });
 }
 
 export function sessionRoots(input) {

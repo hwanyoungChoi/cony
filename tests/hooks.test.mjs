@@ -209,33 +209,76 @@ describe("verify-on-stop: 종료 전 lint + typecheck", () => {
 });
 
 describe("board-on-stop / board-on-end: 보드 상태", () => {
-  test("진행 중인 채로 턴을 끝내면 한 번 막음", () => {
+  // 리드 = 이 세션에서 board.mjs 를 실행했거나 board.md 를 고친 세션
+  const becomeLead = (project, session_id) =>
+    runHook("guard-bash.mjs", {
+      session_id,
+      cwd: project,
+      tool_input: { command: 'node "/plugin/skills/team/board.mjs" --task 1=doing' },
+    });
+  const boardText = (project) => readFileSync(join(project, ".cony", "board.md"), "utf8");
+
+  test("리드가 진행 중인 채로 턴을 끝내면 한 번 막음", () => {
     const project = createProject();
     writeBoard(project, "진행 중");
-    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project })), "block");
-    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, stop_hook_active: true })), "allow");
+    becomeLead(project, "lead-1");
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "lead-1" })), "block");
+    assert.equal(
+      decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "lead-1", stop_hook_active: true })),
+      "allow",
+    );
   });
 
-  test("사용자 대기·완료면 통과", () => {
+  test("board.md 를 직접 고친 세션도 리드로 본다", () => {
     const project = createProject();
+    writeBoard(project, "진행 중");
+    runHook("guard-instructions.mjs", {
+      session_id: "lead-edit",
+      tool_input: { file_path: join(project, ".cony", "board.md") },
+    });
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "lead-edit" })), "block");
+  });
+
+  test("보드를 갱신하지 않은 세션(/cony:status 등)은 막지 않음", () => {
+    const project = createProject();
+    writeBoard(project, "진행 중");
+    becomeLead(project, "lead-2");
+    runHook("guard-bash.mjs", { session_id: "viewer", cwd: project, tool_input: { command: "git status --short" } });
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "viewer" })), "allow");
+  });
+
+  test("리드가 사용자 대기·완료로 바꾸면 통과", () => {
+    const project = createProject();
+    becomeLead(project, "lead-3");
     writeBoard(project, "사용자 대기");
-    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project })), "allow");
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "lead-3" })), "allow");
     writeBoard(project, "완료");
-    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project })), "allow");
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "lead-3" })), "allow");
   });
 
-  test("세션이 끝나면 진행 중을 중단됨으로 바꿈", () => {
+  test("리드 세션이 끝나면 진행 중을 중단됨으로 바꿈", () => {
     const project = createProject();
     writeBoard(project, "진행 중");
-    runHook("board-on-end.mjs", { cwd: project, session_id: "end" });
-    assert.match(readFileSync(join(project, ".cony", "board.md"), "utf8"), /상태: 중단됨/);
+    becomeLead(project, "lead-4");
+    runHook("board-on-end.mjs", { cwd: project, session_id: "lead-4" });
+    assert.match(boardText(project), /상태: 중단됨/);
+  });
+
+  test("다른 세션이 끝나도 리드의 보드는 그대로", () => {
+    const project = createProject();
+    writeBoard(project, "진행 중");
+    becomeLead(project, "lead-5");
+    runHook("guard-bash.mjs", { session_id: "viewer-2", cwd: project, tool_input: { command: "git diff --stat" } });
+    runHook("board-on-end.mjs", { cwd: project, session_id: "viewer-2" });
+    assert.match(boardText(project), /상태: 진행 중/);
   });
 
   test("완료 상태는 건드리지 않음", () => {
     const project = createProject();
     writeBoard(project, "완료");
-    runHook("board-on-end.mjs", { cwd: project, session_id: "end2" });
-    assert.match(readFileSync(join(project, ".cony", "board.md"), "utf8"), /상태: 완료/);
+    becomeLead(project, "lead-6");
+    runHook("board-on-end.mjs", { cwd: project, session_id: "lead-6" });
+    assert.match(boardText(project), /상태: 완료/);
   });
 });
 

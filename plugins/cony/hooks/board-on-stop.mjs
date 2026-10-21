@@ -1,12 +1,12 @@
 import { relative } from "node:path";
 
-import { output, readBoardStatus, readInput, sessionRoots } from "./lib.mjs";
+import { output, readBoardStatus, readInput, leadRoots } from "./lib.mjs";
 
 const input = readInput();
 // 같은 턴에서 한 번만 알린다.
 if (input.stop_hook_active) process.exit(0);
 
-const stale = sessionRoots(input)
+const stale = leadRoots(input.session_id)
   .map((root) => ({ root, board: readBoardStatus(root) }))
   .filter(({ board }) => board?.status.includes("진행"));
 if (stale.length === 0) process.exit(0);

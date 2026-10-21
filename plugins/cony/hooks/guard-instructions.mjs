@@ -11,6 +11,7 @@ if (!root) process.exit(0);
 rememberRoot(input.session_id, root);
 
 const rel = relative(root, filePath).split("\\").join("/");
+if (rel === ".cony/board.md") rememberRoot(input.session_id, root, "lead");
 const isProtected = basename(filePath) === "CLAUDE.md" || rel.startsWith(".claude/");
 if (!isProtected) process.exit(0);
 

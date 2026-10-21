@@ -23,6 +23,7 @@ function commandDirs() {
 const cwd = commandDirs().reverse().find((dir) => findConyRoot(dir));
 if (!cwd) process.exit(0);
 rememberRoot(input.session_id, findConyRoot(cwd));
+if (/\bboard\.mjs\b/.test(command)) rememberRoot(input.session_id, findConyRoot(cwd), "lead");
 
 // "git -C 경로 push" 도 "git push" 와 같은 규칙에 걸리게 한다.
 const normalized = command.replace(/\bgit\s+-C\s+("[^"]+"|'[^']+'|\S+)\s+/g, "git ");
