@@ -1,6 +1,6 @@
 # cony
 
-Claude Code용 개인 플러그인 마켓플레이스. 기획 / 클라이언트 / 백엔드 / 테스트 4인 에이전트 팀이 스스로 토론하고 작업한 뒤 보고하는 하네스, `cony` 플러그인이 들어 있다.
+Claude Code용 개인 플러그인 마켓플레이스. `pm`(기획) · `fe`(클라이언트) · `be`(백엔드) · `qa`(테스트) 4인 에이전트 팀이 스스로 토론해 결정하고, 기능을 머지까지 만든 뒤 보고하는 하네스 `cony`가 들어 있다.
 
 ## 설치
 
@@ -19,6 +19,15 @@ claude plugin install development@conychoi-plugins   # 개인 컴퓨터에서만
 - 회사 컴퓨터에는 사내 `development` 플러그인이 같은 스킬을 같은 이름으로 제공하므로 `development@conychoi-plugins`는 설치하지 않는다. 둘을 같이 설치하면 스킬 이름이 겹친다.
 - 팀 흐름에서 기획서가 있으면 `spec-review`, REVIEW 단계에서 `code-review-fe`, 커밋할 때 `commit-message`를 쓴다.
 
+### 업데이트
+
+```bash
+claude plugin marketplace update conychoi-plugins
+claude plugin update cony@conychoi-plugins
+```
+
+업데이트는 **실행 중인 세션에도 바로 반영된다.** 에이전트·스킬 이름처럼 호환이 깨지는 변경은 팀이 작업 중인 세션을 끊을 수 있으니, 그 세션이 쉬는 틈에 올리고 바뀐 점을 알려준다.
+
 ## 사용
 
 ```
@@ -28,7 +37,7 @@ claude plugin install development@conychoi-plugins   # 개인 컴퓨터에서만
 /cony:board                       # 진행 상황을 브라우저 대시보드로 (실시간 갱신)
 ```
 
-`/cony:board`는 `.cony/`를 감시하는 로컬 서버(`localhost:4747`)를 띄운다. 태스크는 **BACKLOG · TODO · PROGRESS · REVIEW · DONE** 칸반으로 보이고, 리드가 보드를 갱신하는 즉시 카드가 옮겨간다. 확인 필요·막힌 것 배너와 결정 기록도 함께 보인다. 이 컴퓨터에서만 열리므로 폰에서는 아래 Remote Control을 쓴다.
+`/cony:board`는 `.cony/`를 감시하는 로컬 서버(`localhost:4747`)를 띄운다. 태스크는 **BACKLOG · TODO · PROGRESS · REVIEW · DONE** 칸반으로 보이고, 리드가 보드를 갱신하는 즉시 카드가 옮겨간다. 확인 필요·막힌 것 배너, 결정 기록, 검토 기록(최신 라운드부터 `PM` `FE` `BE` `QA` 배지와 판정)도 함께 보인다. 이 컴퓨터에서만 열리므로 폰에서는 아래 Remote Control을 쓴다.
 
 ## 하네스 구성
 
@@ -38,19 +47,19 @@ claude plugin install development@conychoi-plugins   # 개인 컴퓨터에서만
 | 도구 | 무엇을 할 수 있는가 | 역할별 에이전트 4명, 브라우저·시뮬레이터 화면 확인, 검증 명령 권한 허용 목록 |
 | 제약 | 무엇을 못 하게 막는가 | hook: 지침 파일 수정 차단(사람만 수정), `--no-verify`·`--amend`·force push 차단, CI 미통과 PR 머지 차단, `main` 직접 push·`reset --hard`·DB 리셋은 승인 필요 |
 | 피드백 루프 | 틀렸다는 걸 어떻게 아는가 | hook: 파일 수정 즉시 ESLint, 종료 전 lint + typecheck(실패하면 못 끝냄), 보드가 "진행 중"인 채로 리드가 턴을 끝내면 갱신 요구, 리드 세션 종료 시 보드를 "중단됨"으로 표시(상태만 보는 세션은 해당 없음), 커밋 전 husky, qa의 독립 검증 |
-| 흐름 | 어떤 순서로 일하는가 | `/cony:team`: 작업 브랜치 → 기획 → 스펙 토론 → 태스크별 개발·화면 확인·테스트·커밋 → PR → CI 통과 시 머지 → 보고 |
+| 흐름 | 어떤 순서로 일하는가 | `/cony:team`: 작업 브랜치 → 기획 → 스펙 토론 → 태스크마다 PROGRESS(구현) → REVIEW(화면 확인·qa·`code-review-fe`) → DONE(커밋) → PR → CI 통과 시 머지 → 보고 |
 | 개선 | 실수가 어떻게 규칙이 되는가 | `log.md`의 `되돌림`·`놓침` → 보고서의 "규칙 제안" → 사람이 `CLAUDE.md`나 hook으로 승격 |
 
 hook은 `.cony/` 디렉토리가 있는 프로젝트에서만 동작한다. 세션을 연 폴더가 아니어도, 수정한 파일 경로나 `cd`·`git -C`로 들어간 위치가 cony 프로젝트면 동작한다. 다른 프로젝트에는 영향이 없다.
 
 ## 팀
 
-| 에이전트 | 만들 때 | 검토할 때 보는 것 |
-|---|---|---|
-| `pm` | 스펙, 태스크, 선택지 | 요구사항, 범위 |
-| `be` | DB, 마이그레이션, API | 데이터 무결성, 보안, API 계약 |
-| `fe` | 화면, API 연동 | 화면 흐름, 사용성 |
-| `qa` | 테스트 작성·실행 | 테스트 가능성 |
+| 에이전트 | 역할 | 만들 때 | 검토할 때 보는 것 |
+|---|---|---|---|
+| `pm` | 기획 | 스펙, 태스크, 선택지 | 요구사항, 범위 |
+| `fe` | 클라이언트 | 화면, API 연동 | 화면 흐름, 사용성 |
+| `be` | 백엔드 | DB, 마이그레이션, API | 데이터 무결성, 보안, API 계약 |
+| `qa` | 테스트 | 테스트 작성·실행 | 테스트 가능성 |
 
 에이전트끼리는 직접 대화하지 못한다. 메인 세션이 리드가 되어 의견을 전달하며 토론을 진행한다. 검토는 읽고 판정만 하므로 `sonnet`으로, 첫 스펙과 구현은 에이전트 기본 모델로 부른다.
 
