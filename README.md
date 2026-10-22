@@ -1,16 +1,12 @@
 # cony
 
 <p align="center">
-  <img src="assets/cony-team.svg" alt="cony 팀: PM, FE, BE, QA 토끼 네 마리가 칸반 보드 앞에서 협업하는 모습" width="100%">
+  <img src="assets/cony-how-it-works.svg" alt="cony 동작 방식: 리드가 토론으로 결정하고, 칸반으로 진행하며, hook이 위험한 일을 막고, 사용자는 보고를 받는다" width="100%">
 </p>
 
 Claude Code용 개인 플러그인 마켓플레이스. `pm`(기획) · `fe`(클라이언트) · `be`(백엔드) · `qa`(테스트) 4인 에이전트 팀이 스스로 토론해 결정하고, 기능을 머지까지 만든 뒤 보고하는 하네스 `cony`가 들어 있다.
 
 ## 어떻게 동작하나
-
-<p align="center">
-  <img src="assets/cony-how-it-works.svg" alt="cony 동작 방식: 리드가 토론으로 결정하고, 칸반으로 진행하며, hook이 위험한 일을 막고, 사용자는 보고를 받는다" width="100%">
-</p>
 
 1. **토론으로 결정**: 리드(메인 세션)가 pm의 제안을 fe·be·qa에게 검토시키고, 근거로 결정해 ADR과 검토 원문을 남긴다. 에이전트끼리는 직접 대화하지 않는다.
 2. **칸반으로 진행**: 태스크는 PROGRESS → REVIEW → DONE으로 움직이고, qa 검증에서 실패하면 다시 PROGRESS로 돌아간다.
