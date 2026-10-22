@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 960 420" width="960" height="420" role="img" aria-label="cony 팀: PM, FE, BE, QA 토끼 네 마리가 칸반 보드 앞에서 협업하는 모습">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EEF1FF"/>
+      <stop offset="1" stop-color="#FDF2F8"/>
+    </linearGradient>
+    <g id="rabbit" stroke="#2B2B2B" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+      <ellipse cx="-17" cy="-64" rx="11" ry="34" fill="#FFFFFF" transform="rotate(-12 -17 -64)"/>
+      <ellipse cx="-17" cy="-62" rx="5" ry="22" fill="#FFC9D6" stroke="none" transform="rotate(-12 -17 -62)"/>
+      <ellipse cx="17" cy="-64" rx="11" ry="34" fill="#FFFFFF" transform="rotate(12 17 -64)"/>
+      <ellipse cx="17" cy="-62" rx="5" ry="22" fill="#FFC9D6" stroke="none" transform="rotate(12 17 -62)"/>
+      <path d="M-34 68 C-36 40 -24 28 0 28 C24 28 36 40 34 68 C33 90 20 98 0 98 C-20 98 -33 90 -34 68 Z" fill="#FFFFFF"/>
+      <ellipse cx="-15" cy="98" rx="13" ry="7" fill="#FFFFFF"/>
+      <ellipse cx="15" cy="98" rx="13" ry="7" fill="#FFFFFF"/>
+      <ellipse cx="0" cy="0" rx="44" ry="38" fill="#FFFFFF"/>
+      <ellipse cx="-15" cy="-2" rx="3.8" ry="5" fill="#2B2B2B" stroke="none"/>
+      <ellipse cx="15" cy="-2" rx="3.8" ry="5" fill="#2B2B2B" stroke="none"/>
+      <circle cx="-13.8" cy="-4" r="1.3" fill="#FFFFFF" stroke="none"/>
+      <circle cx="16.2" cy="-4" r="1.3" fill="#FFFFFF" stroke="none"/>
+      <ellipse cx="-27" cy="11" rx="7.5" ry="4.5" fill="#FFC1CF" stroke="none"/>
+      <ellipse cx="27" cy="11" rx="7.5" ry="4.5" fill="#FFC1CF" stroke="none"/>
+      <path d="M-5 9 Q-2.5 13 0 9 Q2.5 13 5 9" fill="none" stroke-width="2.5"/>
+    </g>
+  </defs>
+
+  <rect x="0" y="0" width="960" height="420" rx="28" fill="url(#sky)"/>
+  <ellipse cx="480" cy="392" rx="430" ry="26" fill="#E7E3FA"/>
+
+  <!-- sparkles -->
+  <g fill="#FFD43B" stroke="none">
+    <path d="M90 70 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4 Z"/>
+    <path d="M880 96 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3 l8 -3 Z"/>
+    <path d="M760 40 l2.5 6 l6 2.5 l-6 2.5 l-2.5 6 l-2.5 -6 l-6 -2.5 l6 -2.5 Z"/>
+  </g>
+  <g fill="#FFB3C6" stroke="none">
+    <path d="M196 64 c-4 -6 -14 -4 -12 4 c1 5 12 12 12 12 s11 -7 12 -12 c2 -8 -8 -10 -12 -4 Z"/>
+    <path d="M840 160 c-3 -4.5 -10.5 -3 -9 3 c.8 3.8 9 9 9 9 s8.2 -5.2 9 -9 c1.5 -6 -6 -7.5 -9 -3 Z"/>
+  </g>
+
+  <!-- kanban board -->
+  <g transform="translate(250 26)" font-family="ui-rounded, 'SF Pro Rounded', -apple-system, 'Apple SD Gothic Neo', 'Segoe UI', sans-serif">
+    <rect x="0" y="0" width="460" height="172" rx="16" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3.5"/>
+    <text x="18" y="27" font-size="16" font-weight="800" fill="#2B2B2B">cony board</text>
+    <rect x="140" y="17" width="300" height="9" rx="4.5" fill="#E9E9F2"/>
+    <rect x="140" y="17" width="180" height="9" rx="4.5" fill="#3B5BDB"/>
+    <g font-size="9" font-weight="800" fill="#6B6B76" letter-spacing=".4">
+      <g transform="translate(14 40)">
+        <rect width="80" height="120" rx="9" fill="none" stroke="#C9C9D6" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <circle cx="10" cy="13" r="3" fill="#9A9AA6"/><text x="17" y="16">BACKLOG</text>
+        <rect x="7" y="24" width="66" height="17" rx="4" fill="#F1F1F6"/>
+        <rect x="7" y="46" width="66" height="17" rx="4" fill="#F1F1F6"/>
+      </g>
+      <g transform="translate(102 40)">
+        <rect width="80" height="120" rx="9" fill="#F6F6FA"/>
+        <circle cx="10" cy="13" r="3" fill="#9A9AA6"/><text x="17" y="16">TODO</text>
+        <rect x="7" y="24" width="66" height="17" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/>
+      </g>
+      <g transform="translate(190 40)">
+        <rect width="80" height="120" rx="9" fill="#F6F6FA"/>
+        <circle cx="10" cy="13" r="3" fill="#3B5BDB"/><text x="17" y="16">PROGRESS</text>
+        <rect x="7" y="24" width="66" height="17" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/><rect x="7" y="24" width="4" height="17" rx="2" fill="#3B5BDB"/>
+        <rect x="7" y="46" width="66" height="17" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/><rect x="7" y="46" width="4" height="17" rx="2" fill="#3B5BDB"/>
+      </g>
+      <g transform="translate(278 40)">
+        <rect width="80" height="120" rx="9" fill="#F6F6FA"/>
+        <circle cx="10" cy="13" r="3" fill="#F08C00"/><text x="17" y="16">REVIEW</text>
+        <rect x="7" y="24" width="66" height="17" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/><rect x="7" y="24" width="4" height="17" rx="2" fill="#F08C00"/>
+      </g>
+      <g transform="translate(366 40)">
+        <rect width="80" height="120" rx="9" fill="#F6F6FA"/>
+        <circle cx="10" cy="13" r="3" fill="#2F9E44"/><text x="17" y="16">DONE</text>
+        <rect x="7" y="24" width="66" height="17" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/>
+        <rect x="7" y="46" width="66" height="17" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/>
+        <rect x="7" y="68" width="66" height="17" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/>
+        <path d="M60 30 l3 3 l6 -6 M60 52 l3 3 l6 -6 M60 74 l3 3 l6 -6" fill="none" stroke="#2F9E44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- shadows -->
+  <g fill="#2B2B2B" opacity=".08">
+    <ellipse cx="145" cy="357" rx="50" ry="8"/>
+    <ellipse cx="370" cy="357" rx="50" ry="8"/>
+    <ellipse cx="590" cy="357" rx="50" ry="8"/>
+    <ellipse cx="815" cy="357" rx="50" ry="8"/>
+  </g>
+
+  <!-- handoff arrows between role pills -->
+  <g fill="none" stroke="#A9A3D6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 6">
+    <path d="M186 378 H323"/>
+    <path d="M411 378 H543"/>
+    <path d="M631 378 H768"/>
+  </g>
+  <g fill="#A9A3D6" stroke="none">
+    <path d="M330 378 l-9 -5 v10 Z"/>
+    <path d="M550 378 l-9 -5 v10 Z"/>
+    <path d="M775 378 l-9 -5 v10 Z"/>
+  </g>
+
+  <!-- speech bubbles -->
+  <g font-family="-apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', sans-serif" font-size="13" font-weight="700" text-anchor="middle" stroke="#2B2B2B" stroke-width="2.5" stroke-linejoin="round">
+    <g transform="translate(250 222)">
+      <path d="M-46 -16 H46 a8 8 0 0 1 8 8 V8 a8 8 0 0 1 -8 8 H-30 L-44 26 L-40 16 H-46 a8 8 0 0 1 -8 -8 V-8 a8 8 0 0 1 8 -8 Z" fill="#FFFFFF"/>
+      <text x="0" y="5" fill="#7C3AED" stroke="none">스펙 넘겨요!</text>
+    </g>
+    <g transform="translate(475 222)">
+      <path d="M-46 -16 H46 a8 8 0 0 1 8 8 V8 a8 8 0 0 1 -8 8 H-30 L-44 26 L-40 16 H-46 a8 8 0 0 1 -8 -8 V-8 a8 8 0 0 1 8 -8 Z" fill="#FFFFFF"/>
+      <text x="0" y="5" fill="#3B5BDB" stroke="none">API 계약 OK?</text>
+    </g>
+    <g transform="translate(696 222)">
+      <path d="M-46 -16 H46 a8 8 0 0 1 8 8 V8 a8 8 0 0 1 -8 8 H-30 L-44 26 L-40 16 H-46 a8 8 0 0 1 -8 -8 V-8 a8 8 0 0 1 8 -8 Z" fill="#FFFFFF"/>
+      <text x="0" y="5" fill="#2F9E44" stroke="none">준비 완료!</text>
+    </g>
+    <g transform="translate(900 222)">
+      <path d="M-40 -16 H32 a8 8 0 0 1 8 8 V8 a8 8 0 0 1 -8 8 H-20 L-34 26 L-28 16 H-40 a8 8 0 0 1 -8 -8 V-8 a8 8 0 0 1 8 -8 Z" fill="#FFFFFF"/>
+      <text x="-4" y="5" fill="#F08C00" stroke="none">테스트 통과</text>
+    </g>
+  </g>
+
+  <g font-family="ui-rounded, 'SF Pro Rounded', -apple-system, 'Apple SD Gothic Neo', 'Segoe UI', sans-serif" font-weight="800" text-anchor="middle">
+    <!-- PM: clipboard -->
+    <g transform="translate(145 250)">
+      <use xlink:href="#rabbit" href="#rabbit"/>
+      <path d="M-30 32 Q0 46 30 32 L28 41 Q0 55 -28 41 Z" fill="#7C3AED" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round"/>
+      <g transform="translate(0 66) rotate(-6)" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+        <rect x="-21" y="-29" width="42" height="50" rx="5" fill="#FFFBEB"/>
+        <rect x="-9" y="-34" width="18" height="9" rx="3" fill="#7C3AED"/>
+        <rect x="-13" y="-17" width="7" height="7" rx="1.5" fill="#FFFFFF" stroke-width="2"/>
+        <path d="M-12 -14 l2 2 l4 -4" fill="none" stroke="#7C3AED" stroke-width="2"/>
+        <path d="M-2 -13.5 H13" stroke-width="2"/>
+        <rect x="-13" y="-4" width="7" height="7" rx="1.5" fill="#FFFFFF" stroke-width="2"/>
+        <path d="M-12 -1 l2 2 l4 -4" fill="none" stroke="#7C3AED" stroke-width="2"/>
+        <path d="M-2 -0.5 H11" stroke-width="2"/>
+        <rect x="-13" y="9" width="7" height="7" rx="1.5" fill="#FFFFFF" stroke-width="2"/>
+        <path d="M-2 12.5 H9" stroke-width="2"/>
+      </g>
+      <ellipse cx="-23" cy="70" rx="8" ry="7" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3"/>
+      <ellipse cx="23" cy="62" rx="8" ry="7" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3"/>
+      <rect x="-27" y="116" width="54" height="24" rx="12" fill="#7C3AED"/>
+      <text x="0" y="133" font-size="14" fill="#FFFFFF">PM</text>
+    </g>
+
+    <!-- FE: laptop -->
+    <g transform="translate(370 250)">
+      <use xlink:href="#rabbit" href="#rabbit"/>
+      <path d="M-30 32 Q0 46 30 32 L28 41 Q0 55 -28 41 Z" fill="#3B5BDB" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round"/>
+      <g transform="translate(0 74)" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <rect x="-32" y="-34" width="64" height="40" rx="5" fill="#1F2A55"/>
+        <text x="0" y="-8" font-size="15" fill="#8EA4FF" stroke="none" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">&lt;/&gt;</text>
+        <path d="M-40 6 H40 L34 15 H-34 Z" fill="#DCE2F7"/>
+      </g>
+      <ellipse cx="-30" cy="82" rx="8" ry="7" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3"/>
+      <ellipse cx="30" cy="82" rx="8" ry="7" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3"/>
+      <rect x="-27" y="116" width="54" height="24" rx="12" fill="#3B5BDB"/>
+      <text x="0" y="133" font-size="14" fill="#FFFFFF">FE</text>
+    </g>
+
+    <!-- BE: database -->
+    <g transform="translate(590 250)">
+      <use xlink:href="#rabbit" href="#rabbit"/>
+      <path d="M-30 32 Q0 46 30 32 L28 41 Q0 55 -28 41 Z" fill="#2F9E44" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round"/>
+      <g transform="translate(0 68)" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+        <path d="M-22 -22 V20 A22 7 0 0 0 22 20 V-22" fill="#D3F9D8"/>
+        <path d="M-22 -8 A22 7 0 0 0 22 -8 M-22 6 A22 7 0 0 0 22 6" fill="none" stroke-width="2.5"/>
+        <ellipse cx="0" cy="-22" rx="22" ry="7" fill="#B2F2BB"/>
+        <circle cx="13" cy="0" r="2.2" fill="#2F9E44" stroke="none"/>
+        <circle cx="13" cy="14" r="2.2" fill="#2F9E44" stroke="none"/>
+      </g>
+      <ellipse cx="-24" cy="72" rx="8" ry="7" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3"/>
+      <ellipse cx="24" cy="72" rx="8" ry="7" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3"/>
+      <rect x="-27" y="116" width="54" height="24" rx="12" fill="#2F9E44"/>
+      <text x="0" y="133" font-size="14" fill="#FFFFFF">BE</text>
+    </g>
+
+    <!-- QA: magnifier -->
+    <g transform="translate(815 250)">
+      <use xlink:href="#rabbit" href="#rabbit"/>
+      <path d="M-30 32 Q0 46 30 32 L28 41 Q0 55 -28 41 Z" fill="#F08C00" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round"/>
+      <g stroke="#2B2B2B" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M24 74 L42 96" stroke-width="9"/>
+        <path d="M24 74 L42 96" stroke="#A9744F" stroke-width="4"/>
+        <circle cx="10" cy="60" r="19" fill="#FFF4E0" stroke-width="3.5"/>
+        <path d="M1 60 l6 6 l12 -12" fill="none" stroke="#F08C00" stroke-width="3.5"/>
+      </g>
+      <ellipse cx="-24" cy="74" rx="8" ry="7" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3"/>
+      <ellipse cx="30" cy="84" rx="8" ry="7" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3"/>
+      <rect x="-27" y="116" width="54" height="24" rx="12" fill="#F08C00"/>
+      <text x="0" y="133" font-size="14" fill="#FFFFFF">QA</text>
+    </g>
+  </g>
+</svg>
