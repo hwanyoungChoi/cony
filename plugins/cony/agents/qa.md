@@ -1,5 +1,5 @@
 ---
-name: tester
+name: qa
 description: 테스트 담당. .cony/specs/의 수용 기준을 바탕으로 테스트를 작성하고 실행해 통과/실패를 판정할 때, 검토 모드로 다른 역할의 제안을 테스트 가능성 관점에서 리뷰할 때 사용. 제품 코드는 고치지 않고, 실패 원인과 담당자(백엔드/클라이언트)를 지목해 보고한다.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: inherit
@@ -44,7 +44,7 @@ model: inherit
 
 실패 항목마다:
 - 원인 추정 (파일:라인)
-- 담당: backend-dev 또는 client-dev
+- 담당: be 또는 fe
 - 재현 방법
 
 자동 테스트로 검증할 수 없어 화면에서 직접 확인해야 하는 항목도 따로 적는다.

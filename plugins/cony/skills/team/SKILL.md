@@ -1,13 +1,13 @@
 ---
 name: team
-description: cony 에이전트 팀(planner, backend-dev, client-dev, tester)이 스스로 토론해 결정하고 기능을 끝까지 만든 뒤 사용자에게 보고한다. 사용자가 "팀으로 만들어줘", "코니 팀", "알아서 만들어줘", "/cony:team {목표}" 등으로 요청하거나, .cony/board.md의 진행 중 작업을 이어갈 때 사용.
+description: cony 에이전트 팀(pm, be, fe, qa)이 스스로 토론해 결정하고 기능을 끝까지 만든 뒤 사용자에게 보고한다. 사용자가 "팀으로 만들어줘", "코니 팀", "알아서 만들어줘", "/cony:team {목표}" 등으로 요청하거나, .cony/board.md의 진행 중 작업을 이어갈 때 사용.
 ---
 
 # cony 팀 자율 실행
 
 사용자는 목표만 준다. 팀이 토론해서 결정하고, 끝까지 만들고, 보고한다. 사용자는 언제든 `.cony/board.md`나 `/cony:status`로 진행 상황을 본다.
 
-너(메인 세션)는 리드다. 서브에이전트는 서로 직접 대화할 수 없으므로, 리드가 의견을 전달하며 토론을 진행한다. 에이전트를 부를 때는 스펙 경로, 태스크 번호, 필요한 이전 결과를 프롬프트에 그대로 넣는다.
+팀원은 넷이다: `pm`(기획), `fe`(클라이언트), `be`(백엔드), `qa`(테스트). 너(메인 세션)는 리드다. 서브에이전트는 서로 직접 대화할 수 없으므로, 리드가 의견을 전달하며 토론을 진행한다. 에이전트를 부를 때는 스펙 경로, 태스크 번호, 필요한 이전 결과를 프롬프트에 그대로 넣는다.
 
 ## 작업 공간 `.cony/`
 
@@ -16,9 +16,9 @@ description: cony 에이전트 팀(planner, backend-dev, client-dev, tester)이 
 | 경로 | 내용 | 누가 |
 |---|---|---|
 | `board.md` | 현황판. 사용자 중간보고의 원천 | 리드가 단계마다 갱신 |
-| `specs/{feature}.md` | 스펙과 태스크 | planner |
+| `specs/{feature}.md` | 스펙과 태스크 | pm |
 | `decisions/NNN-{slug}.md` | 토론 기록 (결정과 요약) | 리드 |
-| `reviews/{NNN 또는 spec-feature}-{역할}.md` | 검토 원문 | 검토자 본인 |
+| `reviews/{YYYYMMDD-HHmm}-{역할}-{대상}.md` | 검토 원문. 시각이 앞이라 이름순이 곧 시간순 | 검토자 본인 |
 | `log.md` | 작업 기록 | 리드 |
 | `reports/{YYYY-MM-DD}-{feature}.md` | 최종 보고 | 리드 |
 
@@ -31,7 +31,7 @@ description: cony 에이전트 팀(planner, backend-dev, client-dev, tester)이 
 node "{이 스킬 디렉토리}/board.mjs" --init --goal "계산기" --spec specs/calculator.md
 
 # 이후 단계마다, 바뀐 것만 옵션으로
-node "{이 스킬 디렉토리}/board.mjs" --task 1=done --task 2=progress:client-dev --now "client-dev가 태스크 2 구현 중"
+node "{이 스킬 디렉토리}/board.mjs" --task 1=done --task 2=progress:fe --now "fe가 태스크 2 구현 중"
 node "{이 스킬 디렉토리}/board.mjs" --decision decisions/004-scope.md
 node "{이 스킬 디렉토리}/board.mjs" --status "사용자 대기" --attention "언매치 시 채팅 기록 처리" --blocked none
 node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
@@ -57,8 +57,8 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 
 | 단계 | 스킬 | 없을 때 |
 |---|---|---|
-| 기획 | `development:spec-review` — 사용자가 기획서 파일·URL을 줬을 때만 | planner가 기획서를 직접 읽는다 |
-| REVIEW | `development:code-review-fe` — 태스크 변경분을 stage한 뒤 | tester 검증만 한다 |
+| 기획 | `development:spec-review` — 사용자가 기획서 파일·URL을 줬을 때만 | pm가 기획서를 직접 읽는다 |
+| REVIEW | `development:code-review-fe` — 태스크 변경분을 stage한 뒤 | qa 검증만 한다 |
 | 커밋 | `development:commit-message` | 영문 prefix(feat/fix/chore/refactor/docs) + 한글 본문으로 직접 쓴다 |
 
 ## 모델 배정
@@ -68,8 +68,8 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 | 일 | 모델 | 이유 |
 |---|---|---|
 | 검토 모드 (스펙 토론, 결정 토론) | `sonnet` | 읽고 판정만 한다. 같은 토큰이라도 플랜 사용량을 덜 쓴다 |
-| planner 스펙 수정 (결정 반영, 문장 보완) | `sonnet` | 이미 정해진 내용을 옮겨 적는 일이다 |
-| planner 첫 스펙 작성 | 에이전트 기본값 | 범위와 태스크 분해의 질이 이후 전부를 좌우한다 |
+| pm 스펙 수정 (결정 반영, 문장 보완) | `sonnet` | 이미 정해진 내용을 옮겨 적는 일이다 |
+| pm 첫 스펙 작성 | 에이전트 기본값 | 범위와 태스크 분해의 질이 이후 전부를 좌우한다 |
 | 구현, 테스트 작성 | 에이전트 기본값 | 코드 품질이 결과물이다 |
 
 검토가 너무 얕다고 느껴지면(근거 없이 찬성만 반복) 그 결정에 한해 기본 모델로 다시 부른다.
@@ -89,8 +89,8 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 
 **언제**: 되돌리기 비싼 선택(디렉토리·라우팅 구조, 라이브러리 도입, 데이터 모델, API 계약, 상태를 어디에 둘지), 에이전트가 "결정 필요"를 반환했을 때, 에이전트들의 결과가 서로 충돌할 때. 되돌리기 쉬운 구현 세부는 담당자가 정한다.
 
-1. **제안**: 담당 에이전트가 선택지 2~3개와 추천을 낸다. 제품·구조는 planner, 구현은 해당 dev가 맡는다.
-2. **검토**: 이 결정에 영향을 받는 역할만 병렬로 부른다. 백엔드가 없는 프로젝트에서 backend-dev처럼 관련 없는 역할은 부르지 않는다. `model: sonnet`으로 부르고, 프롬프트 첫 줄에 `검토 모드`라고 쓰고 제안 전문과 `기록 파일: .cony/reviews/{NNN}-{역할}.md`를 넣는다. 각자 자기 역할 관점에서 판정, 근거, 리스크를 그 파일에 직접 쓰고 같은 내용을 반환한다. 원문은 검토자가 직접 남기므로 리드가 옮겨 적지 않는다.
+1. **제안**: 담당 에이전트가 선택지 2~3개와 추천을 낸다. 제품·구조는 pm, 구현은 해당 dev가 맡는다.
+2. **검토**: 이 결정에 영향을 받는 역할만 병렬로 부른다. 백엔드가 없는 프로젝트에서 be처럼 관련 없는 역할은 부르지 않는다. `model: sonnet`으로 부르고, 프롬프트 첫 줄에 `검토 모드`라고 쓰고 제안 전문과 `기록 파일: .cony/reviews/{YYYYMMDD-HHmm}-{역할}-adr-{NNN}.md`를 넣는다. 시각은 검토를 부르는 시점이고, 같은 라운드의 검토자들은 같은 시각을 쓴다. 역할은 `pm`·`fe`·`be`·`qa`. 각자 자기 역할 관점에서 판정, 근거, 리스크를 그 파일에 직접 쓰고 같은 내용을 반환한다. 원문은 검토자가 직접 남기므로 리드가 옮겨 적지 않는다.
 3. **반론**: 반대나 조건이 있을 때만, 그 의견을 제안자에게 전달해 수정안이나 반박을 받는다. 1회만.
 4. **결정**: 리드가 판정한다. 다수결이 아니라 근거로 정하고, 기준은 이 순서를 따른다.
    1. `CLAUDE.md`의 제약
@@ -104,8 +104,8 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 - 상태: 채택 | 뒤집힘(사용자)
 - 맥락: 왜 결정이 필요했나
 - 선택지: A / B / C
-- 의견: planner(찬성, 근거 한 줄) / backend-dev(반대, 근거 한 줄) / ...
-- 검토 원문: [planner](../reviews/NNN-planner.md) · [backend-dev](../reviews/NNN-backend-dev.md) · ...
+- 의견: pm(찬성, 근거 한 줄) / be(반대, 근거 한 줄) / ...
+- 검토 원문: [pm](../reviews/20261022-1430-pm-adr-NNN.md) · [be](../reviews/20261022-1430-be-adr-NNN.md) · ...
 - 결정: A
 - 이유:
 - 뒤집을 조건: 이런 상황이 오면 다시 본다
@@ -118,10 +118,10 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 2. 기본 브랜치를 최신으로 받고 `cony/{feature-slug}` 브랜치를 만든다. 이후 모든 작업은 이 브랜치에서 한다.
 
 ### 1. 기획
-1. 사용자가 기획서 파일이나 URL을 줬으면 `development:spec-review`로 먼저 1차 정리하고, 그 결과를 planner에게 함께 넘긴다.
-2. `planner`에 목표를 전달해 스펙과 태스크를 받는다.
-3. **스펙 토론**: 스펙의 태스크 담당에 나오는 역할과 `tester`를 검토 모드(`model: sonnet`, 기록 파일 `.cony/reviews/spec-{feature}-{역할}.md`)로 병렬로 불러 스펙을 리뷰시킨다(실현 가능성, 계약 누락, 테스트 가능성, 범위). 태스크에 backend가 없으면 `backend-dev`는 부르지 않는다.
-4. 이견은 토론 프로토콜로 정리하고 planner가 스펙에 반영한다. planner의 "결정 필요" 항목도 토론으로 정한다.
+1. 사용자가 기획서 파일이나 URL을 줬으면 `development:spec-review`로 먼저 1차 정리하고, 그 결과를 pm에게 함께 넘긴다.
+2. `pm`에 목표를 전달해 스펙과 태스크를 받는다.
+3. **스펙 토론**: 스펙의 태스크 담당에 나오는 역할과 `qa`를 검토 모드(`model: sonnet`, 기록 파일 `.cony/reviews/{YYYYMMDD-HHmm}-{역할}-spec-{feature}.md`)로 병렬로 불러 스펙을 리뷰시킨다(실현 가능성, 계약 누락, 테스트 가능성, 범위). 태스크에 backend가 없으면 `be`는 부르지 않는다.
+4. 이견은 토론 프로토콜로 정리하고 pm가 스펙에 반영한다. pm의 "결정 필요" 항목도 토론으로 정한다.
 5. `board.mjs --init`으로 board를 만든다. 사용자 확인 없이 개발로 넘어간다.
 
 ### 2. 태스크 반복
@@ -129,9 +129,9 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 
 보드의 칸반은 이 흐름을 따른다: **TODO → PROGRESS → REVIEW → DONE**. BACKLOG는 스펙의 "다음 단계 후보"에서 자동으로 채워진다.
 
-1. **개발** (`--task N=progress:{담당}`): 담당에 맞춰 `backend-dev`, `client-dev`를 부른다. API 계약이 확정돼 있으면 병렬로, 아니면 backend 먼저. 계약이 바뀌면 반드시 client에 전달한다.
-2. **화면 확인** (`--task N=review:리드`): 구현이 끝나면 REVIEW로 옮긴다. 화면이 바뀌었으면 리드가 직접 실행해 client-dev가 준 확인 항목을 눌러본다(웹은 브라우저, 앱은 iOS 시뮬레이터). 못 했으면 log에 남긴다.
-3. **테스트** (`--task N=review:tester`): `tester`를 부르고, 같은 단계에서 태스크 변경분을 stage한 뒤 `development:code-review-fe`로 컨벤션을 검사한다. 지적된 위반은 담당 dev가 고친다. `tester`를 실패하면 지목된 담당이 고치는 동안 PROGRESS로 되돌리고, 고친 뒤 다시 REVIEW로 옮겨 테스트한다. 2회 안에 안 풀리면 원인을 두고 토론하거나, 그래도 안 되면 "막힌 것"에 올리고 다음 태스크로 간다.
+1. **개발** (`--task N=progress:{담당}`): 담당에 맞춰 `be`, `fe`를 부른다. API 계약이 확정돼 있으면 병렬로, 아니면 backend 먼저. 계약이 바뀌면 반드시 client에 전달한다.
+2. **화면 확인** (`--task N=review:리드`): 구현이 끝나면 REVIEW로 옮긴다. 화면이 바뀌었으면 리드가 직접 실행해 fe가 준 확인 항목을 눌러본다(웹은 브라우저, 앱은 iOS 시뮬레이터). 못 했으면 log에 남긴다.
+3. **테스트** (`--task N=review:qa`): `qa`를 부르고, 같은 단계에서 태스크 변경분을 stage한 뒤 `development:code-review-fe`로 컨벤션을 검사한다. 지적된 위반은 담당 dev가 고친다. `qa`를 실패하면 지목된 담당이 고치는 동안 PROGRESS로 되돌리고, 고친 뒤 다시 REVIEW로 옮겨 테스트한다. 2회 안에 안 풀리면 원인을 두고 토론하거나, 그래도 안 되면 "막힌 것"에 올리고 다음 태스크로 간다.
 4. **커밋** (`--task N=done`): 테스트를 통과하고 커밋까지 끝나야 DONE이다. 작업 브랜치에 태스크마다 의미 단위로 커밋한다. 설정 변경과 기능 변경은 나누고, 메시지는 `development:commit-message`로 만든다. 커밋할 때마다 작업 브랜치를 push해서 다른 기기에서도 진행 상황을 받아볼 수 있게 한다.
 5. **기록**: 스펙의 태스크 체크박스, board, log를 갱신한다.
 
@@ -176,7 +176,7 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 
 ```markdown
 - 사용량: {에이전트} {한 일} · {모델} · {토큰} · {걸린 시간}
-- 사용량: tester 스펙 검토 · sonnet · 20k 토큰 · 30초
+- 사용량: qa 스펙 검토 · sonnet · 20k 토큰 · 30초
 ```
 
 ## 최종 보고 형식

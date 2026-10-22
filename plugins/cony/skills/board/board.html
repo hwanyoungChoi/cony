@@ -136,6 +136,16 @@
   .md a { color: var(--accent); }
 
   .decisions { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .reviews button { display: grid; gap: 4px; }
+  .review-row { display: flex; align-items: center; gap: 6px; }
+  .role { font-size: 10px; font-weight: 700; letter-spacing: .05em; padding: 1px 6px; border-radius: 4px; background: var(--bg); color: var(--muted); }
+  .role.pm { background: #ede9fe; color: #6d28d9; }
+  .role.fe { background: var(--accent-soft); color: var(--accent); }
+  .role.be { background: var(--ok-soft); color: var(--ok); }
+  .role.qa { background: var(--warn-soft); color: var(--warn); }
+  @media (prefers-color-scheme: dark) { .role.pm { background: #2e2550; color: #c4b5fd; } }
+  .review-when { margin-left: auto; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .review-meta { font-size: 12px; color: var(--muted); }
   .decisions button {
     width: 100%; text-align: left; background: none; border: 1px solid var(--border); color: var(--text);
     border-radius: 8px; padding: 8px 10px; font: inherit; cursor: pointer;
@@ -184,6 +194,8 @@
     <aside class="card">
       <h2 class="card-title">결정 기록</h2>
       <ul class="decisions" id="decisions"></ul>
+      <h2 class="card-title">검토 기록</h2>
+      <ul class="decisions reviews" id="reviews"></ul>
     </aside>
   </div>
 </div>
@@ -388,6 +400,23 @@
       button.addEventListener("click", () => openFile(decision.path));
       li.append(button);
       list.append(li);
+    }
+
+    const reviews = document.getElementById("reviews");
+    reviews.replaceChildren();
+    if (!data.reviews?.length) reviews.append(el("li", "empty", "아직 없음"));
+    for (const review of data.reviews ?? []) {
+      const button = el("button");
+      button.type = "button";
+      const row = el("div", "review-row");
+      row.append(el("span", `role ${review.role}`, (review.role || "?").toUpperCase()), el("span", "", review.target));
+      if (review.when) row.append(el("span", "review-when", review.when));
+      button.append(row);
+      if (review.verdict) button.append(el("span", "review-meta", review.verdict));
+      button.addEventListener("click", () => openFile(review.path));
+      const li = el("li");
+      li.append(button);
+      reviews.append(li);
     }
 
     renderUpdated();

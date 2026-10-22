@@ -1,5 +1,5 @@
 ---
-name: client-dev
+name: fe
 description: 클라이언트 개발 담당(React 웹, Next.js, React Native/Expo 앱). .cony/specs/의 스펙에서 지정된 태스크를 받아 화면과 API 연동을 구현할 때, 검토 모드로 다른 역할의 제안을 화면 흐름·사용성 관점에서 리뷰할 때 사용. 서버 코드는 건드리지 않는다.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: inherit

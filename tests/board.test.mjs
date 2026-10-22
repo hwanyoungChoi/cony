@@ -63,8 +63,8 @@ describe("board.mjs", () => {
   test("태스크 진행·완료와 스펙 체크박스 동기화", () => {
     const dir = createProject();
     board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
-    board(dir, "--task", "1=doing:client-dev");
-    assert.match(read(dir, "board.md"), /- \[ \] 1\. 최소 버전 \(AC-1\) \[PROGRESS · client-dev\]$/m);
+    board(dir, "--task", "1=doing:fe");
+    assert.match(read(dir, "board.md"), /- \[ \] 1\. 최소 버전 \(AC-1\) \[PROGRESS · fe\]$/m);
     assert.doesNotMatch(read(dir, "specs/calc.md"), /- \[x\] 1\./);
 
     board(dir, "--task", "1=done", "--task", "2=doing");
@@ -81,10 +81,10 @@ describe("board.mjs", () => {
   test("REVIEW 상태는 태그로 남고 스펙 체크박스는 건드리지 않는다", () => {
     const dir = createProject();
     board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
-    board(dir, "--task", "1=progress:client-dev");
-    const r = board(dir, "--task", "1=review:tester");
+    board(dir, "--task", "1=progress:fe");
+    const r = board(dir, "--task", "1=review:qa");
     assert.equal(r.status, 0, r.stderr);
-    assert.match(read(dir, "board.md"), /- \[ \] 1\. 최소 버전 \(AC-1\) \[REVIEW · tester\]$/m);
+    assert.match(read(dir, "board.md"), /- \[ \] 1\. 최소 버전 \(AC-1\) \[REVIEW · qa\]$/m);
     assert.match(read(dir, "specs/calc.md"), /^- \[ \] 1\. 최소 버전/m);
     assert.match(r.stdout, /TODO 1 · PROGRESS 0 · REVIEW 1 · DONE 0/);
   });
@@ -93,9 +93,9 @@ describe("board.mjs", () => {
     const dir = createProject();
     board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
     const path = join(dir, ".cony", "board.md");
-    writeFileSync(path, read(dir, "board.md").replace("- [ ] 2. 경계 처리 (AC-4)", "- [ ] 2. 경계 처리 (AC-4) ← 진행 중 (client-dev)"));
-    board(dir, "--task", "2=review:tester");
-    assert.match(read(dir, "board.md"), /- \[ \] 2\. 경계 처리 \(AC-4\) \[REVIEW · tester\]$/m);
+    writeFileSync(path, read(dir, "board.md").replace("- [ ] 2. 경계 처리 (AC-4)", "- [ ] 2. 경계 처리 (AC-4) ← 진행 중 (fe)"));
+    board(dir, "--task", "2=review:qa");
+    assert.match(read(dir, "board.md"), /- \[ \] 2\. 경계 처리 \(AC-4\) \[REVIEW · qa\]$/m);
   });
 
   test("백로그는 스펙의 다음 단계 후보를 따라간다", () => {
@@ -135,10 +135,10 @@ describe("board.mjs", () => {
     const dir = createProject();
     board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
     board(dir, "--task", "1=done", "--attention", "질문");
-    board(dir, "--status", "사용자 대기", "--now", "tester 대기", "--pr", "#3 · CI 통과");
+    board(dir, "--status", "사용자 대기", "--now", "qa 대기", "--pr", "#3 · CI 통과");
     const text = read(dir, "board.md");
     assert.match(text, /상태: 사용자 대기/);
-    assert.match(text, /## 지금 하는 일\ntester 대기/);
+    assert.match(text, /## 지금 하는 일\nqa 대기/);
     assert.match(text, /## PR\n#3 · CI 통과/);
     assert.match(text, /- \[x\] 1\./);
     assert.match(text, /- 질문/);

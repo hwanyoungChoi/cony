@@ -1,5 +1,5 @@
 ---
-name: planner
+name: pm
 description: 기획과 스펙 작성 담당. 목표를 스펙과 태스크로 쪼갤 때, 제품·구조에 관한 선택지를 제안할 때, 검토 모드로 다른 역할의 제안을 요구사항 관점에서 리뷰할 때 사용. 코드는 수정하지 않고 .cony/specs/ 아래 스펙만 작성한다.
 tools: Read, Grep, Glob, Write, WebSearch, WebFetch
 model: opus

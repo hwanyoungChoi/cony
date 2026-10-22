@@ -2,8 +2,8 @@
 // .cony/board.md 의 필요한 부분만 갱신한다. 시각은 매번 자동으로 기록된다.
 //
 //   새 보드:  node board.mjs --init --goal "계산기" --spec specs/calculator.md
-//   갱신:     node board.mjs --status "진행 중" --task 1=done --task 2=doing:client-dev \
-//               --now "client-dev가 태스크 2 구현 중" --decision decisions/004-scope.md \
+//   갱신:     node board.mjs --status "진행 중" --task 1=done --task 2=doing:fe \
+//               --now "fe가 태스크 2 구현 중" --decision decisions/004-scope.md \
 //               --attention "질문" --blocked none --pr "#14 · CI 진행 중"
 //
 // --task 값: N=todo | N=progress[:담당] | N=review[:담당] | N=done   (doing 은 progress 와 같다)
@@ -19,7 +19,7 @@ import { findConyRoot } from "../../hooks/lib.mjs";
 
 const SECTIONS = ["태스크", "백로그", "지금 하는 일", "최근 결정", "사용자 확인 필요", "막힌 것", "PR"];
 const STATUSES = ["진행 중", "사용자 대기", "완료", "중단됨"];
-// 태스크 줄: "- [ ] 2. 제목 [PROGRESS · client-dev]". 예전 형식 "← 진행 중 (담당)"도 읽는다.
+// 태스크 줄: "- [ ] 2. 제목 [PROGRESS · fe]". 예전 형식 "← 진행 중 (담당)"도 읽는다.
 const TASK_LINE = /^- \[([ xX])\] (\d+)\. (.*?)(?: \[(?:PROGRESS|REVIEW)[^\]]*\]| ← .*)?$/;
 const STATE_ALIASES = { todo: "todo", doing: "progress", progress: "progress", review: "review", done: "done" };
 

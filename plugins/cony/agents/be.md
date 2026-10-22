@@ -1,5 +1,5 @@
 ---
-name: backend-dev
+name: be
 description: 백엔드 개발 담당(DB 스키마, 마이그레이션, API). .cony/specs/의 스펙에서 지정된 태스크를 받아 서버 측을 구현할 때, 검토 모드로 다른 역할의 제안을 데이터·보안·계약 관점에서 리뷰할 때 사용. 클라이언트 코드는 건드리지 않는다.
 tools: Read, Grep, Glob, Edit, Write, Bash
 model: inherit
