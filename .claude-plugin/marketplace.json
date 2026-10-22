@@ -12,6 +12,15 @@
       "name": "cony",
       "source": "./plugins/cony",
       "description": "기획 / 클라이언트 / 백엔드 / 테스트 4인 에이전트 팀과 팀 실행 스킬"
+    },
+    {
+      "name": "development",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/hwanyoungChoi/my-plugins.git",
+        "path": "plugins/development"
+      },
+      "description": "my-plugins의 개발 스킬(commit-message, code-review-fe, spec-review). 원본은 hwanyoungChoi/my-plugins에서 관리한다"
     }
   ]
 }

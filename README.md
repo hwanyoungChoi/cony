@@ -7,7 +7,17 @@ Claude Code용 개인 플러그인 마켓플레이스. 기획 / 클라이언트 
 ```bash
 claude plugin marketplace add hwanyoungChoi/cony
 claude plugin install cony@conychoi-plugins
+claude plugin install development@conychoi-plugins   # 개인 컴퓨터에서만
 ```
+
+| 플러그인 | 내용 | 원본 |
+|---|---|---|
+| `cony` | 하네스: 에이전트 4명, hook, 팀·보드·상태·세팅 스킬 | 이 저장소 |
+| `development` | `commit-message`, `code-review-fe`, `spec-review` 스킬 | [my-plugins](https://github.com/hwanyoungChoi/my-plugins)를 가리키기만 한다 |
+
+- 스킬은 my-plugins에서 고치고 push하면 된다. 여기서는 `claude plugin marketplace update conychoi-plugins`로 최신을 받는다.
+- 회사 컴퓨터에는 사내 `development` 플러그인이 같은 스킬을 같은 이름으로 제공하므로 `development@conychoi-plugins`는 설치하지 않는다. 둘을 같이 설치하면 스킬 이름이 겹친다.
+- 팀 흐름에서 기획서가 있으면 `spec-review`, REVIEW 단계에서 `code-review-fe`, 커밋할 때 `commit-message`를 쓴다.
 
 ## 사용
 

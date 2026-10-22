@@ -51,6 +51,16 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 - 턴을 끝내고 사용자에게 넘길 때는 `--status "사용자 대기"`나 `"완료"`로 바꾼다. "진행 중"인 채로 턴을 끝내려 하면 hook이 한 번 막는다.
 - 리드 세션이 끝나면 hook이 "진행 중"을 "중단됨"으로 바꾼다. 리드는 `board.mjs`를 실행한 세션이다. 다른 세션에서 `/cony:status`로 확인하는 건 보드에 영향을 주지 않는다. 이어서 할 때는 `--status "진행 중"`으로 돌리고 시작한다.
 
+## 함께 쓰는 스킬
+
+`development` 플러그인의 스킬을 쓴다. 집에서는 cony 마켓플레이스의 `development@conychoi-plugins`(my-plugins), 회사에서는 사내 `development` 플러그인이 같은 이름으로 제공한다. 스킬이 없으면 괄호 안의 대체 방법으로 진행하고 log에 `놓침`으로 남긴다.
+
+| 단계 | 스킬 | 없을 때 |
+|---|---|---|
+| 기획 | `development:spec-review` — 사용자가 기획서 파일·URL을 줬을 때만 | planner가 기획서를 직접 읽는다 |
+| REVIEW | `development:code-review-fe` — 태스크 변경분을 stage한 뒤 | tester 검증만 한다 |
+| 커밋 | `development:commit-message` | 영문 prefix(feat/fix/chore/refactor/docs) + 한글 본문으로 직접 쓴다 |
+
 ## 모델 배정
 
 사용량을 아끼려고 일의 무게에 따라 모델을 나눈다. Agent 도구의 `model`로 지정한다.
@@ -108,10 +118,11 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 2. 기본 브랜치를 최신으로 받고 `cony/{feature-slug}` 브랜치를 만든다. 이후 모든 작업은 이 브랜치에서 한다.
 
 ### 1. 기획
-1. `planner`에 목표를 전달해 스펙과 태스크를 받는다.
-2. **스펙 토론**: 스펙의 태스크 담당에 나오는 역할과 `tester`를 검토 모드(`model: sonnet`, 기록 파일 `.cony/reviews/spec-{feature}-{역할}.md`)로 병렬로 불러 스펙을 리뷰시킨다(실현 가능성, 계약 누락, 테스트 가능성, 범위). 태스크에 backend가 없으면 `backend-dev`는 부르지 않는다.
-3. 이견은 토론 프로토콜로 정리하고 planner가 스펙에 반영한다. planner의 "결정 필요" 항목도 토론으로 정한다.
-4. `board.mjs --init`으로 board를 만든다. 사용자 확인 없이 개발로 넘어간다.
+1. 사용자가 기획서 파일이나 URL을 줬으면 `development:spec-review`로 먼저 1차 정리하고, 그 결과를 planner에게 함께 넘긴다.
+2. `planner`에 목표를 전달해 스펙과 태스크를 받는다.
+3. **스펙 토론**: 스펙의 태스크 담당에 나오는 역할과 `tester`를 검토 모드(`model: sonnet`, 기록 파일 `.cony/reviews/spec-{feature}-{역할}.md`)로 병렬로 불러 스펙을 리뷰시킨다(실현 가능성, 계약 누락, 테스트 가능성, 범위). 태스크에 backend가 없으면 `backend-dev`는 부르지 않는다.
+4. 이견은 토론 프로토콜로 정리하고 planner가 스펙에 반영한다. planner의 "결정 필요" 항목도 토론으로 정한다.
+5. `board.mjs --init`으로 board를 만든다. 사용자 확인 없이 개발로 넘어간다.
 
 ### 2. 태스크 반복
 태스크마다 아래를 반복한다.
@@ -120,8 +131,8 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 
 1. **개발** (`--task N=progress:{담당}`): 담당에 맞춰 `backend-dev`, `client-dev`를 부른다. API 계약이 확정돼 있으면 병렬로, 아니면 backend 먼저. 계약이 바뀌면 반드시 client에 전달한다.
 2. **화면 확인** (`--task N=review:리드`): 구현이 끝나면 REVIEW로 옮긴다. 화면이 바뀌었으면 리드가 직접 실행해 client-dev가 준 확인 항목을 눌러본다(웹은 브라우저, 앱은 iOS 시뮬레이터). 못 했으면 log에 남긴다.
-3. **테스트** (`--task N=review:tester`): `tester`를 부른다. 실패하면 지목된 담당이 고치는 동안 PROGRESS로 되돌리고, 고친 뒤 다시 REVIEW로 옮겨 테스트한다. 2회 안에 안 풀리면 원인을 두고 토론하거나, 그래도 안 되면 "막힌 것"에 올리고 다음 태스크로 간다.
-4. **커밋** (`--task N=done`): 테스트를 통과하고 커밋까지 끝나야 DONE이다. 작업 브랜치에 태스크마다 의미 단위로 커밋한다. 설정 변경과 기능 변경은 나누고, 메시지는 영문 prefix + 한글 본문으로 쓴다. 커밋할 때마다 작업 브랜치를 push해서 다른 기기에서도 진행 상황을 받아볼 수 있게 한다.
+3. **테스트** (`--task N=review:tester`): `tester`를 부르고, 같은 단계에서 태스크 변경분을 stage한 뒤 `development:code-review-fe`로 컨벤션을 검사한다. 지적된 위반은 담당 dev가 고친다. `tester`를 실패하면 지목된 담당이 고치는 동안 PROGRESS로 되돌리고, 고친 뒤 다시 REVIEW로 옮겨 테스트한다. 2회 안에 안 풀리면 원인을 두고 토론하거나, 그래도 안 되면 "막힌 것"에 올리고 다음 태스크로 간다.
+4. **커밋** (`--task N=done`): 테스트를 통과하고 커밋까지 끝나야 DONE이다. 작업 브랜치에 태스크마다 의미 단위로 커밋한다. 설정 변경과 기능 변경은 나누고, 메시지는 `development:commit-message`로 만든다. 커밋할 때마다 작업 브랜치를 push해서 다른 기기에서도 진행 상황을 받아볼 수 있게 한다.
 5. **기록**: 스펙의 태스크 체크박스, board, log를 갱신한다.
 
 ### 3. PR과 머지

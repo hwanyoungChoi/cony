@@ -14,7 +14,13 @@ description: 새 React/Next.js/React Native 프로젝트에 cony 하네스를 �
 
 ## 1. 컨벤션 문서
 
-이 스킬 디렉토리의 `CONVENTIONS.md`를 프로젝트의 `.claude/CONVENTIONS.md`로 복사한다. 이미 있으면 덮어쓰지 말고 차이를 보여준다.
+컨벤션 원본은 my-plugins 저장소의 `code-review-fe` 스킬에 있다. 받아서 프로젝트의 `.claude/CONVENTIONS.md`로 저장한다. 이미 있으면 덮어쓰지 말고 차이를 보여준다.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hwanyoungChoi/my-plugins/main/plugins/development/skills/code-review-fe/references/CONVENTIONS.md -o .claude/CONVENTIONS.md
+```
+
+받지 못하면(오프라인 등) 사용자에게 알리고 이 단계만 건너뛴다. 내용을 지어내서 채우지 않는다.
 
 ## 2. CLAUDE.md
 
