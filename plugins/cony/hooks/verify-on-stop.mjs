@@ -8,6 +8,7 @@ import {
   detectPackageManager,
   findUp,
   output,
+  logEvent,
   readInput,
   sessionRoots,
   truncate,
@@ -129,6 +130,9 @@ const results = sessionRoots(input).map(verifyRoot).filter(Boolean);
 if (results.length === 0) process.exit(0);
 
 const blocking = results.filter((r) => r.attempts <= MAX_ATTEMPTS);
+for (const r of results) {
+  logEvent(r.root, { type: "hook", hook: "verify-on-stop", decision: r.attempts <= MAX_ATTEMPTS ? "block" : "allow-after-max", attempts: r.attempts });
+}
 if (blocking.length === 0) {
   output({
     systemMessage: `[cony] lint/typecheck 실패가 ${MAX_ATTEMPTS}회 연속 해결되지 않아 종료를 허용했습니다. 보고서의 남은 이슈를 확인하세요.`,

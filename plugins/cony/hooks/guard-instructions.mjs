@@ -1,6 +1,6 @@
 import { basename, dirname, relative } from "node:path";
 
-import { findConyRoot, output, readInput, rememberRoot } from "./lib.mjs";
+import { findConyRoot, logEvent, output, readInput, rememberRoot } from "./lib.mjs";
 
 const input = readInput();
 const filePath = input.tool_input?.file_path;
@@ -16,6 +16,7 @@ const isProtected = basename(filePath) === "CLAUDE.md" || rel.startsWith(".claud
 if (!isProtected) process.exit(0);
 
 // "ask" 는 auto 모드에서 자동 승인될 수 있어 보호가 되지 않는다.
+logEvent(root, { type: "hook", hook: "guard-instructions", decision: "deny", file: rel });
 output({
   hookSpecificOutput: {
     hookEventName: "PreToolUse",

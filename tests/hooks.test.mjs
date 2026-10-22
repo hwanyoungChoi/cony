@@ -91,6 +91,11 @@ describe("guard-instructions: 지침 파일 보호", () => {
   test(".claude/ 아래 수정은 차단", () => assert.equal(edit(join(project, ".claude", "CONVENTIONS.md")), "deny"));
   test("일반 소스 파일은 허용", () => assert.equal(edit(join(project, "src", "index.ts")), "allow"));
   test("cony 프로젝트가 아니면 관여하지 않음", () => assert.equal(edit(join(outside, "CLAUDE.md")), "allow"));
+  test("막으면 지표 이벤트를 남긴다", () => {
+    edit(join(project, "CLAUDE.md"));
+    const lines = readFileSync(join(project, ".cony", "metrics", "events.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    assert.ok(lines.some((e) => e.type === "hook" && e.hook === "guard-instructions" && e.decision === "deny"));
+  });
 });
 
 describe("guard-bash: 위험 명령", () => {

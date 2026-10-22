@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
-import { expandHome, findConyRoot, output, readInput, rememberRoot, truncate } from "./lib.mjs";
+import { expandHome, findConyRoot, logEvent, output, readInput, rememberRoot, truncate } from "./lib.mjs";
 
 const PROTECTED_BRANCHES = new Set(["main", "master"]);
 
@@ -29,6 +29,7 @@ if (/\bboard\.mjs\b/.test(command)) rememberRoot(input.session_id, findConyRoot(
 const normalized = command.replace(/\bgit\s+-C\s+("[^"]+"|'[^']+'|\S+)\s+/g, "git ");
 
 function decide(permissionDecision, reason) {
+  logEvent(findConyRoot(cwd), { type: "hook", hook: "guard-bash", decision: permissionDecision, command: command.slice(0, 200) });
   output({
     hookSpecificOutput: {
       hookEventName: "PreToolUse",

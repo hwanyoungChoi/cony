@@ -11,12 +11,19 @@
 // --attention, --blocked: 여러 번 주면 목록, none 이면 "없음"
 // --decision: ADR 파일에서 제목과 결정을 읽어 "최근 결정" 맨 위에 추가
 // --lead: 리드 세션의 데스크톱 앱 세션 ID(local_...). /cony:status 가 리드 상태를 확인하고 재개 메시지를 보낼 때 쓴다
+//
+// 상태 전이 규칙 (팀 흐름을 코드로 지킨다):
+//   todo → progress → review → done, review → progress(되돌림), 어디서든 → todo
+//   건너뛰기(todo→review, todo/progress→done)는 막는다.
+//   review → done 은 qa 기록(team.json 의 qa 설정에 따라)과 커밋되지 않은 변경 없음을 확인한다.
+//   --skip-reason "이유" 로 넘어갈 수 있지만 log.md 에 `놓침`으로, 지표에 gate_bypassed 로 남는다.
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 
-import { findConyRoot } from "../../hooks/lib.mjs";
+import { findConyRoot, logEvent } from "../../hooks/lib.mjs";
 
 const SECTIONS = ["태스크", "백로그", "지금 하는 일", "최근 결정", "사용자 확인 필요", "막힌 것", "PR"];
 const STATUSES = ["진행 중", "사용자 대기", "완료", "중단됨"];
@@ -38,6 +45,7 @@ const { values } = parseArgs({
     pr: { type: "string" },
     root: { type: "string" },
     lead: { type: "string" },
+    "skip-reason": { type: "string" },
   },
 });
 
@@ -96,35 +104,100 @@ function backlogFromSpec(specRel) {
   return items.length ? items.join("\n") : "없음";
 }
 
-function setTask(tasksText, spec, value) {
+function stateOf(line) {
+  if (/^- \[[xX]\]/.test(line)) return "done";
+  if (/\[REVIEW/.test(line)) return "review";
+  if (/\[PROGRESS| ← /.test(line)) return "progress";
+  return "todo";
+}
+
+const NEXT = { todo: ["progress"], progress: ["review"], review: ["progress", "done"], done: [] };
+
+function readTeam() {
+  try {
+    return JSON.parse(readFileSync(join(conyDir, "team.json"), "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function hasRecord(folder, pattern) {
+  const dir = join(conyDir, folder);
+  return existsSync(dir) && readdirSync(dir).some((name) => pattern.test(name));
+}
+
+function uncommittedChanges() {
+  try {
+    return execFileSync("git", ["status", "--porcelain", "--", ".", ":(exclude).cony"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return ""; // git 저장소가 아니면 검사하지 않는다
+  }
+}
+
+// 이 전이를 막아야 하면 이유 목록을, 괜찮으면 빈 배열을 돌려준다.
+function gateProblems(number, from, to) {
+  if (to === "todo" || from === to) return [];
+  if (!NEXT[from].includes(to)) {
+    return [
+      `태스크 ${number}: ${from.toUpperCase()} → ${to.toUpperCase()}는 단계를 건너뜁니다. TODO → PROGRESS → REVIEW → DONE 순서로 옮기세요.`,
+    ];
+  }
+  if (to !== "done") return [];
+  const problems = [];
+  const qa = readTeam().qa ?? "build";
+  const taskPattern = new RegExp(`-qa-task-${number}(\\D|$)`);
+  if (qa === "build" && !hasRecord("reviews", taskPattern)) {
+    problems.push(
+      `태스크 ${number}: qa 검증 기록이 없습니다. qa에게 기록 파일 .cony/reviews/{YYYYMMDD-HHmm}-qa-task-${number}.md 를 남기게 하세요.`,
+    );
+  }
+  if (qa === "review" && !hasRecord("handoffs", taskPattern)) {
+    problems.push(
+      `태스크 ${number}: qa가 review인데 테스트 시나리오가 없습니다. .cony/handoffs/{YYYYMMDD-HHmm}-qa-task-${number}.md 를 남기게 하세요.`,
+    );
+  }
+  const dirty = uncommittedChanges();
+  if (dirty) {
+    problems.push(
+      `태스크 ${number}: 커밋하지 않은 변경이 있습니다. 커밋한 뒤 DONE으로 옮기세요.\n${dirty.split("\n").slice(0, 8).join("\n")}`,
+    );
+  }
+  return problems;
+}
+
+function setTask(tasksText, value) {
   const match = value.match(/^(\d+)=(\w+)(?::(.+))?$/);
   const state = match && STATE_ALIASES[match[2]];
   if (!state) fail(`--task 형식은 N=todo | N=progress[:담당] | N=review[:담당] | N=done 입니다: ${value}`);
   const [, number, , owner] = match;
-  let found = false;
+  let from = null;
   const updated = tasksText
     .split("\n")
     .map((line) => {
       const task = line.match(TASK_LINE);
       if (!task || task[2] !== number) return line;
-      found = true;
+      from = stateOf(line);
       const box = state === "done" ? "x" : " ";
       const tag = state === "progress" || state === "review" ? ` [${state.toUpperCase()}${owner ? ` · ${owner}` : ""}]` : "";
       return `- [${box}] ${number}. ${task[3]}${tag}`;
     })
     .join("\n");
-  if (!found) fail(`보드에 태스크 ${number}이(가) 없습니다.`);
+  if (!from) fail(`보드에 태스크 ${number}이(가) 없습니다.`);
+  return { updated, number, from, to: state, owner: owner ?? null };
+}
 
-  // 완료·되돌림은 스펙 체크박스에도 반영한다
-  if (spec && (state === "done" || state === "todo")) {
-    const specPath = join(conyDir, spec);
-    if (existsSync(specPath)) {
-      const specText = readFileSync(specPath, "utf8");
-      const box = state === "done" ? "x" : " ";
-      writeFileSync(specPath, specText.replace(new RegExp(`^- \\[[ xX]\\] ${number}\\. `, "m"), `- [${box}] ${number}. `));
-    }
-  }
-  return updated;
+// 완료·되돌림은 스펙 체크박스에도 반영한다
+function syncSpecCheckbox(spec, number, state) {
+  if (!spec || (state !== "done" && state !== "todo")) return;
+  const specPath = join(conyDir, spec);
+  if (!existsSync(specPath)) return;
+  const box = state === "done" ? "x" : " ";
+  const specText = readFileSync(specPath, "utf8");
+  writeFileSync(specPath, specText.replace(new RegExp(`^- \\[[ xX]\\] ${number}\\. `, "m"), `- [${box}] ${number}. `));
 }
 
 function decisionLine(rel) {
@@ -166,7 +239,20 @@ if (values.status) {
   board.status = values.status;
 }
 if (values.now) board.sections["지금 하는 일"] = values.now;
-for (const value of values.task ?? []) board.sections["태스크"] = setTask(board.sections["태스크"], board.spec, value);
+const transitions = [];
+const problems = [];
+for (const value of values.task ?? []) {
+  const t = setTask(board.sections["태스크"], value);
+  board.sections["태스크"] = t.updated;
+  transitions.push(t);
+  problems.push(...gateProblems(t.number, t.from, t.to));
+}
+const skipReason = values["skip-reason"];
+if (problems.length && !skipReason) {
+  fail(
+    `팀 흐름 규칙에 걸려 보드를 바꾸지 않았습니다.\n- ${problems.join("\n- ")}\n꼭 넘어가야 하면 --skip-reason "이유"를 붙이세요. log.md에 놓침으로 남습니다.`,
+  );
+}
 for (const rel of values.decision ?? []) {
   const line = decisionLine(rel);
   const existing = board.sections["최근 결정"]
@@ -179,6 +265,18 @@ if (values.blocked) board.sections["막힌 것"] = listOrNone(values.blocked);
 if (values.pr) board.sections.PR = values.pr;
 
 writeFileSync(boardPath, renderBoard(board));
+
+for (const t of transitions) {
+  syncSpecCheckbox(board.spec, t.number, t.to);
+  if (t.from !== t.to) logEvent(root, { type: "task", task: Number(t.number), from: t.from, to: t.to, owner: t.owner });
+}
+if (problems.length) {
+  logEvent(root, { type: "gate_bypassed", reason: skipReason, problems });
+  const logPath = join(conyDir, "log.md");
+  const lines = problems.map((p) => `- \`놓침\` 흐름 규칙 건너뜀 (${skipReason}): ${p.split("\n")[0]}`).join("\n");
+  appendFileSync(logPath, `${existsSync(logPath) ? "\n" : ""}${lines}\n`);
+}
+if (values.status) logEvent(root, { type: "status", status: board.status });
 
 const tasks = board.sections["태스크"].split("\n").filter((l) => TASK_LINE.test(l));
 const count = (pattern) => tasks.filter((l) => pattern.test(l)).length;

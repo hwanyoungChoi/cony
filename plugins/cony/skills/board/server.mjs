@@ -2,6 +2,8 @@ import { existsSync, readdirSync, readFileSync, statSync, watch } from "node:fs"
 import { createServer } from "node:http";
 import { basename, dirname, join, resolve, sep } from "node:path";
 
+import { computeStats } from "./stats.mjs";
+
 const START_PORT = Number(process.env.CONY_BOARD_PORT ?? 4747);
 const MAX_PORT_TRIES = 10;
 
@@ -108,6 +110,8 @@ function resolveConyFile(relPath) {
   return full.startsWith(conyDir + sep) && existsSync(full) ? full : null;
 }
 
+let statsCache = null;
+
 const server = createServer((req, res) => {
   const url = new URL(req.url, "http://localhost");
 
@@ -137,6 +141,13 @@ const server = createServer((req, res) => {
     }
     res.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8" });
     res.end(readFileSync(file, "utf8"));
+    return;
+  }
+
+  if (url.pathname === "/stats") {
+    if (!statsCache || Date.now() - statsCache.at > 10_000) statsCache = { at: Date.now(), body: JSON.stringify(computeStats(root)) };
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(statsCache.body);
     return;
   }
 

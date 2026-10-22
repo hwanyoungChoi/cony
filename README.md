@@ -52,7 +52,9 @@ claude plugin update cony@conychoi-plugins
 /cony:board                       # 진행 상황을 브라우저 대시보드로 (실시간 갱신)
 ```
 
-`/cony:board`는 `.cony/`를 감시하는 로컬 서버(`localhost:4747`)를 띄운다. 태스크는 **BACKLOG · TODO · PROGRESS · REVIEW · DONE** 칸반으로 보이고, 리드가 보드를 갱신하는 즉시 카드가 옮겨간다. 확인 필요·막힌 것 배너, 결정 기록, 검토 기록(최신 라운드부터 `PM` `FE` `BE` `QA` 배지와 판정)도 함께 보인다. 이 컴퓨터에서만 열리므로 폰에서는 아래 Remote Control을 쓴다.
+`/cony:board`는 `.cony/`를 감시하는 로컬 서버(`localhost:4747`)를 띄운다. **보드** 탭과 **지표** 탭이 있다. 태스크는 **BACKLOG · TODO · PROGRESS · REVIEW · DONE** 칸반으로 보이고, 리드가 보드를 갱신하는 즉시 카드가 옮겨간다. 확인 필요·막힌 것 배너, 결정 기록, 검토 기록(최신 라운드부터 `PM` `FE` `BE` `QA` 배지와 판정)도 함께 보인다. 이 컴퓨터에서만 열리므로 폰에서는 아래 Remote Control을 쓴다.
+
+**지표** 탭은 cony가 값어치를 하는지 숫자로 보여준다. 역할별 토큰(Claude Code 대화 기록에서 자동 집계), 완료 태스크와 소요 시간, qa 되돌림, 흐름 규칙 건너뜀, 반대·조건부 의견이 있었던 결정 비율, 사용자가 뒤집은 결정, 사람 개입 횟수, hook이 막은 횟수. 비슷한 크기의 기능을 cony 팀과 일반 세션으로 각각 만들어 이 숫자를 비교하면 팀 구조의 효과를 판단할 수 있다.
 
 ## 하네스 구성
 
@@ -62,8 +64,8 @@ claude plugin update cony@conychoi-plugins
 | 도구 | 무엇을 할 수 있는가 | 역할별 에이전트 4명, 브라우저·시뮬레이터 화면 확인, 검증 명령 권한 허용 목록 |
 | 제약 | 무엇을 못 하게 막는가 | hook: 지침 파일 수정 차단(사람만 수정), `--no-verify`·`--amend`·force push 차단, CI 미통과 PR 머지 차단, `main` 직접 push·`reset --hard`·DB 리셋은 승인 필요 |
 | 피드백 루프 | 틀렸다는 걸 어떻게 아는가 | hook: 파일 수정 즉시 ESLint, 종료 전 lint + typecheck(실패하면 못 끝냄), 보드가 "진행 중"인 채로 리드가 턴을 끝내면 갱신 요구, 리드 세션 종료 시 보드를 "중단됨"으로 표시(상태만 보는 세션은 해당 없음), 커밋 전 husky, qa의 독립 검증 |
-| 흐름 | 어떤 순서로 일하는가 | `/cony:team`: 작업 브랜치 → 기획 → 스펙 토론 → 태스크마다 PROGRESS(구현) → REVIEW(화면 확인·qa·`code-review-fe`) → DONE(커밋) → PR → CI 통과 시 머지 → 보고 |
-| 개선 | 실수가 어떻게 규칙이 되는가 | `log.md`의 `되돌림`·`놓침` → 보고서의 "규칙 제안" → 사람이 `CLAUDE.md`나 hook으로 승격 |
+| 흐름 | 어떤 순서로 일하는가 | `board.mjs`가 단계 건너뛰기를 막는다(qa 기록·커밋 없이 DONE 불가, `--skip-reason`은 기록으로 남음). `/cony:team`: 작업 브랜치 → 기획 → 스펙 토론 → 태스크마다 PROGRESS(구현) → REVIEW(화면 확인·qa·`code-review-fe`) → DONE(커밋) → PR → CI 통과 시 머지 → 보고 |
+| 개선 | 실수가 어떻게 규칙이 되는가 | `log.md`의 `되돌림`·`놓침` → 보고서의 "규칙 제안" → 사람이 `CLAUDE.md`나 hook으로 승격. 지표 탭으로 효과를 측정 |
 
 hook은 `.cony/` 디렉토리가 있는 프로젝트에서만 동작한다. 세션을 연 폴더가 아니어도, 수정한 파일 경로나 `cd`·`git -C`로 들어간 위치가 cony 프로젝트면 동작한다. 다른 프로젝트에는 영향이 없다.
 
@@ -135,6 +137,7 @@ Remote Control은 세션을 돌리는 컴퓨터가 켜져 있어야 한다. 잠�
 | `reviews/` | 검토 원문. 검토자가 직접 쓴다. `20261022-1430-fe-adr-003.md`처럼 시각-역할-대상 순이라 이름순이 곧 시간순 |
 | `log.md` | 작업 기록 (`요청` / `토론` / `AI` / `되돌림` / `놓침`) |
 | `reports/` | 최종 보고서 |
+| `metrics/events.jsonl` | 태스크 상태 변화, 규칙 건너뜀, hook 차단 기록 (지표의 원천) |
 | `.cache/` | hook 상태 (gitignore) |
 
 ## 개발
@@ -142,5 +145,5 @@ Remote Control은 세션을 돌리는 컴퓨터가 켜져 있어야 한다. 잠�
 hook이나 보드 스크립트를 고친 뒤에는 테스트를 돌린다. 실제 ESLint·tsc·gh 대신 가짜 실행 파일을 써서 의존성 없이 몇 초 만에 끝난다. push하면 GitHub Actions에서도 돈다.
 
 ```bash
-node --test tests/hooks.test.mjs tests/board.test.mjs
+node --test tests/hooks.test.mjs tests/board.test.mjs tests/stats.test.mjs
 ```

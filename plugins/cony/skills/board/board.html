@@ -116,6 +116,29 @@
   .chip.owner { background: var(--accent-soft); color: var(--accent); }
   .column[data-col="review"] .chip.owner { background: var(--warn-soft); color: var(--warn); }
   .column-empty { font-size: 12px; color: var(--muted); padding: 6px 2px; }
+  .tabs { display: flex; gap: 6px; margin-top: 14px; }
+  .tabs button { font: inherit; font-weight: 700; font-size: 13px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--text); color: var(--surface); border-color: var(--text); }
+  .stats-note { color: var(--muted); font-size: 12px; margin: 14px 2px 0; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .tile .label { font-size: 12px; color: var(--muted); }
+  .tile .value { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .tile .sub { font-size: 11px; color: var(--muted); }
+  .stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+  @media (max-width: 860px) { .stats-grid { grid-template-columns: 1fr; } }
+  .stats-card { padding-bottom: 16px; }
+  .bars { display: grid; gap: 10px; }
+  .bar-row { display: grid; grid-template-columns: 52px 1fr; gap: 10px; align-items: center; }
+  .bar-track { display: grid; gap: 3px; }
+  .bar-fill { height: 10px; border-radius: 0 4px 4px 0; background: var(--accent); min-width: 2px; }
+  .bar-text { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bar-text b { color: var(--text); }
+  .stats-hint { font-size: 11px; color: var(--muted); margin: 12px 0 0; }
+  .kv { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .kv td { padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .kv td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .tooltip { position: fixed; z-index: 10; pointer-events: none; background: var(--text); color: var(--surface); font-size: 12px; line-height: 1.5; padding: 8px 10px; border-radius: 8px; max-width: 260px; }
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; margin-top: 16px; }
   @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px 22px 18px; min-width: 0; }
@@ -185,6 +208,12 @@
     </div>
   </header>
 
+  <nav class="tabs" role="tablist" aria-label="화면">
+    <button type="button" role="tab" id="tab-board" aria-selected="true">보드</button>
+    <button type="button" role="tab" id="tab-stats" aria-selected="false">지표</button>
+  </nav>
+
+  <div id="board-view">
   <div class="alerts" id="alerts"></div>
 
   <div class="kanban-wrap">
@@ -204,7 +233,33 @@
       <ul class="decisions reviews" id="reviews"></ul>
     </aside>
   </div>
+  </div>
+
+  <div id="stats-view" hidden>
+    <p class="stats-note" id="stats-note">불러오는 중…</p>
+    <section class="tiles" id="stats-tiles" aria-label="핵심 지표"></section>
+    <div class="stats-grid">
+      <section class="card stats-card">
+        <h2 class="card-title">역할별 토큰</h2>
+        <div id="cost-bars" class="bars"></div>
+        <p class="stats-hint">합계에는 캐시 읽기가 포함된다. 역할 간 비교는 출력 토큰과 실행 횟수를 함께 본다.</p>
+      </section>
+      <section class="card stats-card">
+        <h2 class="card-title">토론</h2>
+        <div id="debate"></div>
+      </section>
+      <section class="card stats-card">
+        <h2 class="card-title">사람 개입 (log.md)</h2>
+        <div id="people"></div>
+      </section>
+      <section class="card stats-card">
+        <h2 class="card-title">hook이 막은 횟수</h2>
+        <div id="hooks"></div>
+      </section>
+    </div>
+  </div>
 </div>
+<div class="tooltip" id="tooltip" hidden></div>
 
 <dialog id="viewer">
   <div class="head"><button type="button" aria-label="닫기" id="close">×</button></div>
@@ -479,6 +534,124 @@
   source.onmessage = (event) => render(JSON.parse(event.data));
 
   setInterval(renderUpdated, 30000);
+
+  // ── 지표 ──
+  const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n));
+  const ROLE_ORDER = ["리드", "pm", "fe", "be", "qa", "기타"];
+  let statsTimer = null;
+
+  function tile(label, value, sub) {
+    const node = el("div", "tile");
+    node.append(el("div", "label", label), el("div", "value", value));
+    if (sub) node.append(el("div", "sub", sub));
+    return node;
+  }
+
+  function kvTable(rows) {
+    const table = el("table", "kv");
+    for (const [k, v] of rows) {
+      const tr = el("tr");
+      tr.append(el("td", "", k), el("td", "", String(v)));
+      table.append(tr);
+    }
+    return table;
+  }
+
+  const tooltip = document.getElementById("tooltip");
+  function showTip(event, lines) {
+    tooltip.replaceChildren(...lines.map((l) => el("div", "", l)));
+    tooltip.hidden = false;
+    tooltip.style.left = `${Math.min(event.clientX + 12, window.innerWidth - 270)}px`;
+    tooltip.style.top = `${event.clientY + 12}px`;
+  }
+
+  function renderStats(s) {
+    const c = s.cost;
+    const hookTotal = Object.values(s.hooks).reduce((sum, d) => sum + Object.values(d).reduce((a, b) => a + b, 0), 0);
+    const agentRuns = Object.entries(c.byRole).filter(([r]) => r !== "리드").reduce((a, [, b]) => a + b.runs, 0);
+    document.getElementById("stats-note").textContent = c.found
+      ? `${c.since ? c.since.slice(0, 10) : "?"}부터 · ${new Date(s.generatedAt).toLocaleTimeString()} 기준 · 30초마다 갱신`
+      : "이 프로젝트의 Claude Code 대화 기록을 찾지 못해 비용 지표는 비어 있다.";
+
+    document.getElementById("stats-tiles").replaceChildren(
+      tile("출력 토큰", fmt(c.total.output), `합계 ${fmt(c.total.total)} (캐시 포함)`),
+      tile("에이전트 실행", String(agentRuns), "리드 제외"),
+      tile("완료 태스크", String(s.flow.done), s.flow.avgCycleMin != null ? `평균 ${s.flow.avgCycleMin}분` : "소요 시간 기록 없음"),
+      tile("qa 되돌림", String(s.flow.rollbacks), "REVIEW → PROGRESS"),
+      tile("규칙 건너뜀", String(s.flow.bypasses), "--skip-reason"),
+      tile("hook 차단", String(hookTotal), "전체 hook 합계"),
+    );
+
+    const roles = ROLE_ORDER.filter((r) => c.byRole[r]);
+    const max = Math.max(1, ...roles.map((r) => c.byRole[r].total));
+    const bars = document.getElementById("cost-bars");
+    bars.replaceChildren();
+    if (!roles.length) bars.append(el("p", "empty", "기록 없음"));
+    for (const role of roles) {
+      const b = c.byRole[role];
+      const row = el("div", "bar-row");
+      const label = ["pm", "fe", "be", "qa"].includes(role) ? el("span", `role ${role}`, role.toUpperCase()) : el("span", "role", role);
+      const track = el("div", "bar-track");
+      const fill = el("div", "bar-fill");
+      fill.style.width = `${(b.total / max) * 100}%`;
+      const text = el("div", "bar-text");
+      text.append(el("b", "", fmt(b.total)), document.createTextNode(` · 출력 ${fmt(b.output)} · ${b.runs}회`));
+      track.append(fill, text);
+      row.append(label, track);
+      row.addEventListener("mousemove", (e) =>
+        showTip(e, [
+          `${role} · 실행 ${b.runs}회 · 응답 ${b.calls}개`,
+          `입력 ${fmt(b.input)} · 출력 ${fmt(b.output)}`,
+          `캐시 읽기 ${fmt(b.cacheRead)} · 캐시 쓰기 ${fmt(b.cacheWrite)}`,
+          `합계 ${fmt(b.total)} (전체의 ${Math.round((b.total / Math.max(1, c.total.total)) * 100)}%)`,
+        ]),
+      );
+      row.addEventListener("mouseleave", () => (tooltip.hidden = true));
+      bars.append(row);
+    }
+
+    const d = s.debate;
+    const pct = d.adrs ? Math.round((d.adrsWithDissent / d.adrs) * 100) : 0;
+    document.getElementById("debate").replaceChildren(
+      kvTable([
+        ["결정 기록(ADR)", d.adrs],
+        ["반대·조건부 의견이 있었던 결정", `${d.adrsWithDissent} (${pct}%)`],
+        ["사용자가 뒤집은 결정", d.reversedByUser],
+        ["검토 원문", d.reviews],
+        ["검토 판정: 찬성 · 조건부 · 반대", `${d.verdicts.찬성} · ${d.verdicts.조건부} · ${d.verdicts.반대}`],
+        ["사람에게 넘긴 문서", d.handoffs],
+      ]),
+    );
+    document.getElementById("people").replaceChildren(kvTable(Object.entries(s.people)));
+    const hookRows = Object.entries(s.hooks).map(([hook, byDecision]) => [hook, Object.entries(byDecision).map(([k, v]) => `${k} ${v}`).join(" · ")]);
+    document.getElementById("hooks").replaceChildren(hookRows.length ? kvTable(hookRows) : el("p", "empty", "아직 막은 기록 없음"));
+  }
+
+  async function loadStats() {
+    try {
+      const res = await fetch("/stats");
+      renderStats(await res.json());
+    } catch {
+      document.getElementById("stats-note").textContent = "지표를 불러오지 못했다.";
+    }
+  }
+
+  function selectTab(name) {
+    const stats = name === "stats";
+    document.getElementById("tab-board").setAttribute("aria-selected", String(!stats));
+    document.getElementById("tab-stats").setAttribute("aria-selected", String(stats));
+    document.getElementById("board-view").hidden = stats;
+    document.getElementById("stats-view").hidden = !stats;
+    clearInterval(statsTimer);
+    if (stats) {
+      loadStats();
+      statsTimer = setInterval(loadStats, 30000);
+    }
+    try { localStorage.setItem("cony-tab", name); } catch {}
+  }
+  document.getElementById("tab-board").addEventListener("click", () => selectTab("board"));
+  document.getElementById("tab-stats").addEventListener("click", () => selectTab("stats"));
+  try { if (localStorage.getItem("cony-tab") === "stats") selectTab("stats"); } catch {}
 </script>
 </body>
 </html>

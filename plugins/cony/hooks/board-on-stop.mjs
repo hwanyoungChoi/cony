@@ -1,6 +1,6 @@
 import { relative } from "node:path";
 
-import { output, readBoardStatus, readInput, leadRoots } from "./lib.mjs";
+import { logEvent, output, readBoardStatus, readInput, leadRoots } from "./lib.mjs";
 
 const input = readInput();
 // 같은 턴에서 한 번만 알린다.
@@ -11,6 +11,7 @@ const stale = leadRoots(input.session_id)
   .filter(({ board }) => board?.status.includes("진행"));
 if (stale.length === 0) process.exit(0);
 
+for (const { root } of stale) logEvent(root, { type: "hook", hook: "board-on-stop", decision: "block" });
 const paths = stale.map(({ root, board }) => relative(process.cwd(), board.path) || board.path).join(", ");
 output({
   decision: "block",

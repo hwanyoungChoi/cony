@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -45,6 +45,14 @@ function board(dir, ...args) {
   return spawnSync("node", [SCRIPT, ...args], { cwd: dir, encoding: "utf8" });
 }
 
+// qa가 남기는 태스크 검증 기록
+const qaRecord = (dir, number) => {
+  mkdirSync(join(dir, ".cony", "reviews"), { recursive: true });
+  writeFileSync(join(dir, ".cony", "reviews", `20261022-1200-qa-task-${number}.md`), "# 검증\n판정: 통과\n");
+};
+const events = (dir) =>
+  readFileSync(join(dir, ".cony", "metrics", "events.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+
 const read = (dir, rel) => readFileSync(join(dir, ".cony", rel), "utf8");
 
 describe("board.mjs", () => {
@@ -67,7 +75,10 @@ describe("board.mjs", () => {
     assert.match(read(dir, "board.md"), /- \[ \] 1\. 최소 버전 \(AC-1\) \[PROGRESS · fe\]$/m);
     assert.doesNotMatch(read(dir, "specs/calc.md"), /- \[x\] 1\./);
 
-    board(dir, "--task", "1=done", "--task", "2=doing");
+    board(dir, "--task", "1=review:qa");
+    qaRecord(dir, 1);
+    const r = board(dir, "--task", "1=done", "--task", "2=doing");
+    assert.equal(r.status, 0, r.stderr);
     const text = read(dir, "board.md");
     assert.match(text, /- \[x\] 1\. 최소 버전 \(AC-1\)$/m);
     assert.match(text, /- \[ \] 2\. 경계 처리 \(AC-4\) \[PROGRESS\]$/m);
@@ -106,6 +117,81 @@ describe("board.mjs", () => {
     writeFileSync(specPath, read(dir, "specs/calc.md").replace("- AC-5: 식 표시줄\n", ""));
     board(dir, "--now", "갱신");
     assert.doesNotMatch(read(dir, "board.md"), /AC-5: 식 표시줄/);
+  });
+
+  test("단계를 건너뛰면 막고 보드를 바꾸지 않는다", () => {
+    const dir = createProject();
+    board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
+    const before = read(dir, "board.md");
+    for (const step of ["1=done", "1=review"]) {
+      const r = board(dir, "--task", step);
+      assert.notEqual(r.status, 0, step);
+      assert.match(r.stderr, /단계를 건너뜁니다/);
+    }
+    board(dir, "--task", "1=progress:fe");
+    const r = board(dir, "--task", "1=done");
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /PROGRESS → DONE/);
+    assert.match(read(dir, "board.md"), /\[PROGRESS · fe\]/);
+    assert.notEqual(read(dir, "board.md"), before);
+  });
+
+  test("DONE은 qa 기록이 있어야 하고, qa가 off면 필요 없다", () => {
+    const dir = createProject();
+    board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
+    board(dir, "--task", "1=progress");
+    board(dir, "--task", "1=review");
+    let r = board(dir, "--task", "1=done");
+    assert.notEqual(r.status, 0);
+    assert.match(r.stderr, /qa 검증 기록이 없습니다/);
+    writeFileSync(join(dir, ".cony", "team.json"), JSON.stringify({ qa: "off" }));
+    r = board(dir, "--task", "1=done");
+    assert.equal(r.status, 0, r.stderr);
+  });
+
+  test("qa가 review면 테스트 시나리오(handoff)가 있어야 한다", () => {
+    const dir = createProject();
+    writeFileSync(join(dir, ".cony", "team.json"), JSON.stringify({ qa: "review" }));
+    board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
+    board(dir, "--task", "2=progress");
+    board(dir, "--task", "2=review");
+    let r = board(dir, "--task", "2=done");
+    assert.match(r.stderr, /테스트 시나리오가 없습니다/);
+    mkdirSync(join(dir, ".cony", "handoffs"), { recursive: true });
+    writeFileSync(join(dir, ".cony", "handoffs", "20261022-1200-qa-task-2.md"), "# 시나리오\n");
+    r = board(dir, "--task", "2=done");
+    assert.equal(r.status, 0, r.stderr);
+  });
+
+  test("DONE은 커밋하지 않은 변경이 있으면 막는다 (.cony 변경은 제외)", () => {
+    const dir = createProject();
+    const git = (...a) => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...a], { cwd: dir, stdio: "ignore" });
+    git("init", "-q");
+    writeFileSync(join(dir, "app.ts"), "export const a = 1;\n");
+    git("add", "-A");
+    git("commit", "-qm", "init");
+    board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
+    board(dir, "--task", "1=progress");
+    board(dir, "--task", "1=review");
+    qaRecord(dir, 1);
+    writeFileSync(join(dir, "app.ts"), "export const a = 2;\n");
+    let r = board(dir, "--task", "1=done");
+    assert.match(r.stderr, /커밋하지 않은 변경/);
+    git("add", "app.ts");
+    git("commit", "-qm", "task 1");
+    r = board(dir, "--task", "1=done");
+    assert.equal(r.status, 0, r.stderr);
+  });
+
+  test("--skip-reason 으로 넘어가면 log.md와 지표에 남는다", () => {
+    const dir = createProject();
+    board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
+    const r = board(dir, "--task", "1=done", "--skip-reason", "급한 핫픽스");
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(read(dir, "log.md"), /`놓침` 흐름 규칙 건너뜀 \(급한 핫픽스\)/);
+    const types = events(dir).map((e) => e.type);
+    assert.ok(types.includes("gate_bypassed"));
+    assert.deepEqual(events(dir).find((e) => e.type === "task"), { ...events(dir).find((e) => e.type === "task"), task: 1, from: "todo", to: "done" });
   });
 
   test("리드 세션 ID를 기록하고 다른 갱신에도 유지한다", () => {
@@ -147,7 +233,7 @@ describe("board.mjs", () => {
   test("상태·지금 하는 일·PR을 바꿔도 나머지는 유지", () => {
     const dir = createProject();
     board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
-    board(dir, "--task", "1=done", "--attention", "질문");
+    board(dir, "--task", "1=done", "--attention", "질문", "--skip-reason", "테스트용");
     board(dir, "--status", "사용자 대기", "--now", "qa 대기", "--pr", "#3 · CI 통과");
     const text = read(dir, "board.md");
     assert.match(text, /상태: 사용자 대기/);

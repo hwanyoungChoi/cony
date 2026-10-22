@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -109,4 +109,16 @@ export function readBoardStatus(root) {
   const board = readFileSync(path, "utf8");
   const status = (board.match(/^>\s*상태:\s*([^·\n]+)/m) || [])[1]?.trim() ?? "";
   return { path, board, status };
+}
+
+// 지표용 기록. 실패해도 hook 동작에는 영향을 주지 않는다.
+export function logEvent(root, event) {
+  if (!root) return;
+  try {
+    const dir = join(root, ".cony", "metrics");
+    mkdirSync(dir, { recursive: true });
+    appendFileSync(join(dir, "events.jsonl"), `${JSON.stringify({ ts: new Date().toISOString(), ...event })}\n`);
+  } catch {
+    // 기록 실패는 무시
+  }
 }
