@@ -144,6 +144,9 @@
   .role.be { background: var(--ok-soft); color: var(--ok); }
   .role.qa { background: var(--warn-soft); color: var(--warn); }
   @media (prefers-color-scheme: dark) { .role.pm { background: #2e2550; color: #c4b5fd; } }
+  .team { display: flex; gap: 6px; flex-wrap: wrap; }
+  .team .member { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--muted); }
+  .team .member.off { opacity: .45; text-decoration: line-through; }
   .review-when { margin-left: auto; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .review-meta { font-size: 12px; color: var(--muted); }
   .decisions button {
@@ -176,6 +179,7 @@
     </div>
     <div class="meta">
       <span class="project" id="project"></span>
+      <span class="team" id="team"></span>
       <span id="updated"></span>
       <span class="live" id="live"><span class="dot"></span><span id="live-text">연결 중</span></span>
     </div>
@@ -194,6 +198,8 @@
     <aside class="card">
       <h2 class="card-title">결정 기록</h2>
       <ul class="decisions" id="decisions"></ul>
+      <h2 class="card-title">사람에게 넘길 문서</h2>
+      <ul class="decisions reviews" id="handoffs"></ul>
       <h2 class="card-title">검토 기록</h2>
       <ul class="decisions reviews" id="reviews"></ul>
     </aside>
@@ -402,24 +408,38 @@
       list.append(li);
     }
 
-    const reviews = document.getElementById("reviews");
-    reviews.replaceChildren();
-    if (!data.reviews?.length) reviews.append(el("li", "empty", "아직 없음"));
-    for (const review of data.reviews ?? []) {
+    const MODE_LABEL = { build: "구현", review: "검토", off: "제외" };
+    const team = document.getElementById("team");
+    team.replaceChildren();
+    for (const [role, mode] of Object.entries(data.team ?? {})) {
+      const member = el("span", `member ${mode}`);
+      member.append(el("span", `role ${role}`, role.toUpperCase()), el("span", "", MODE_LABEL[mode] ?? mode));
+      team.append(member);
+    }
+
+    renderDocList("reviews", data.reviews);
+    renderDocList("handoffs", data.handoffs);
+
+    renderUpdated();
+  }
+
+  function renderDocList(id, items = []) {
+    const list = document.getElementById(id);
+    list.replaceChildren();
+    if (!items.length) list.append(el("li", "empty", "아직 없음"));
+    for (const item of items) {
       const button = el("button");
       button.type = "button";
       const row = el("div", "review-row");
-      row.append(el("span", `role ${review.role}`, (review.role || "?").toUpperCase()), el("span", "", review.target));
-      if (review.when) row.append(el("span", "review-when", review.when));
+      row.append(el("span", `role ${item.role}`, (item.role || "?").toUpperCase()), el("span", "", item.target));
+      if (item.when) row.append(el("span", "review-when", item.when));
       button.append(row);
-      if (review.verdict) button.append(el("span", "review-meta", review.verdict));
-      button.addEventListener("click", () => openFile(review.path));
+      if (item.verdict) button.append(el("span", "review-meta", item.verdict));
+      button.addEventListener("click", () => openFile(item.path));
       const li = el("li");
       li.append(button);
-      reviews.append(li);
+      list.append(li);
     }
-
-    renderUpdated();
   }
 
   async function openFile(path) {

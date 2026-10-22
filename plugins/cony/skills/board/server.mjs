@@ -42,8 +42,19 @@ function listDecisions() {
 // 파일명: {YYYYMMDD-HHmm}-{역할}-{대상}.md. 예전 이름도 그대로 보여준다.
 const REVIEW_NAME = /^(\d{8})-(\d{4})-(pm|fe|be|qa)-(.+)\.md$/;
 
-function listReviews() {
-  const dir = join(conyDir, "reviews");
+const ROLES = ["pm", "fe", "be", "qa"];
+
+function readTeam() {
+  try {
+    const team = JSON.parse(readFileSync(join(conyDir, "team.json"), "utf8"));
+    return Object.fromEntries(ROLES.map((role) => [role, ["build", "review", "off"].includes(team[role]) ? team[role] : "build"]));
+  } catch {
+    return Object.fromEntries(ROLES.map((role) => [role, "build"]));
+  }
+}
+
+function listReviews(folder = "reviews") {
+  const dir = join(conyDir, folder);
   if (!existsSync(dir)) return [];
   // 최신 라운드가 위, 같은 라운드 안에서는 pm → fe → be → qa
   const roleOrder = (name) => ["pm", "fe", "be", "qa"].indexOf(name.match(REVIEW_NAME)?.[3] ?? "");
@@ -54,8 +65,8 @@ function listReviews() {
       const m = name.match(REVIEW_NAME);
       const verdict = (readMarkdown(join(dir, name)).match(/판정[^:\n]*[:：]\s*\**([^\n*]+)/) || [])[1]?.trim() ?? "";
       return m
-        ? { path: `reviews/${name}`, role: m[3], target: m[4], when: `${m[1].slice(4, 6)}/${m[1].slice(6)} ${m[2].slice(0, 2)}:${m[2].slice(2)}`, verdict }
-        : { path: `reviews/${name}`, role: "", target: name.replace(/\.md$/, ""), when: "", verdict };
+        ? { path: `${folder}/${name}`, role: m[3], target: m[4], when: `${m[1].slice(4, 6)}/${m[1].slice(6)} ${m[2].slice(0, 2)}:${m[2].slice(2)}`, verdict }
+        : { path: `${folder}/${name}`, role: "", target: name.replace(/\.md$/, ""), when: "", verdict };
     });
 }
 
@@ -67,6 +78,8 @@ function snapshot() {
     boardMtime: existsSync(boardPath) ? statSync(boardPath).mtimeMs : null,
     decisions: listDecisions(),
     reviews: listReviews(),
+    handoffs: listReviews("handoffs"),
+    team: readTeam(),
   });
 }
 
