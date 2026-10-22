@@ -17,6 +17,10 @@ const SPEC = `# 계산기
   - [ ] 1-1. 로직 (담당: client)
 - [ ] 2. 경계 처리 (AC-4)
 
+## 다음 단계 후보
+- AC-5: 식 표시줄
+- 태스크 3. 키보드 입력
+
 ## 가정
 - A1: 일반 계산기
 `;
@@ -60,18 +64,48 @@ describe("board.mjs", () => {
     const dir = createProject();
     board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
     board(dir, "--task", "1=doing:client-dev");
-    assert.match(read(dir, "board.md"), /- \[ \] 1\. 최소 버전 \(AC-1\) ← 진행 중 \(client-dev\)/);
+    assert.match(read(dir, "board.md"), /- \[ \] 1\. 최소 버전 \(AC-1\) \[PROGRESS · client-dev\]$/m);
     assert.doesNotMatch(read(dir, "specs/calc.md"), /- \[x\] 1\./);
 
     board(dir, "--task", "1=done", "--task", "2=doing");
     const text = read(dir, "board.md");
     assert.match(text, /- \[x\] 1\. 최소 버전 \(AC-1\)$/m);
-    assert.match(text, /- \[ \] 2\. 경계 처리 \(AC-4\) ← 진행 중$/m);
+    assert.match(text, /- \[ \] 2\. 경계 처리 \(AC-4\) \[PROGRESS\]$/m);
     assert.match(read(dir, "specs/calc.md"), /^- \[x\] 1\. 최소 버전/m);
     assert.match(read(dir, "specs/calc.md"), /^  - \[ \] 1-1\./m);
 
     board(dir, "--task", "1=todo");
     assert.match(read(dir, "specs/calc.md"), /^- \[ \] 1\. 최소 버전/m);
+  });
+
+  test("REVIEW 상태는 태그로 남고 스펙 체크박스는 건드리지 않는다", () => {
+    const dir = createProject();
+    board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
+    board(dir, "--task", "1=progress:client-dev");
+    const r = board(dir, "--task", "1=review:tester");
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(read(dir, "board.md"), /- \[ \] 1\. 최소 버전 \(AC-1\) \[REVIEW · tester\]$/m);
+    assert.match(read(dir, "specs/calc.md"), /^- \[ \] 1\. 최소 버전/m);
+    assert.match(r.stdout, /TODO 1 · PROGRESS 0 · REVIEW 1 · DONE 0/);
+  });
+
+  test("예전 형식(← 진행 중)도 읽고 새 형식으로 바꾼다", () => {
+    const dir = createProject();
+    board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
+    const path = join(dir, ".cony", "board.md");
+    writeFileSync(path, read(dir, "board.md").replace("- [ ] 2. 경계 처리 (AC-4)", "- [ ] 2. 경계 처리 (AC-4) ← 진행 중 (client-dev)"));
+    board(dir, "--task", "2=review:tester");
+    assert.match(read(dir, "board.md"), /- \[ \] 2\. 경계 처리 \(AC-4\) \[REVIEW · tester\]$/m);
+  });
+
+  test("백로그는 스펙의 다음 단계 후보를 따라간다", () => {
+    const dir = createProject();
+    board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
+    assert.match(read(dir, "board.md"), /## 백로그\n- AC-5: 식 표시줄\n- 태스크 3\. 키보드 입력/);
+    const specPath = join(dir, ".cony", "specs", "calc.md");
+    writeFileSync(specPath, read(dir, "specs/calc.md").replace("- AC-5: 식 표시줄\n", ""));
+    board(dir, "--now", "갱신");
+    assert.doesNotMatch(read(dir, "board.md"), /AC-5: 식 표시줄/);
   });
 
   test("결정은 ADR에서 제목과 결정을 읽어 맨 위에 추가하고 중복은 없앤다", () => {
@@ -114,6 +148,7 @@ describe("board.mjs", () => {
   for (const [name, args, message] of [
     ["없는 태스크", ["--task", "9=done"], /태스크 9/],
     ["잘못된 태스크 형식", ["--task", "1=finish"], /형식/],
+    ["태스크 번호 누락", ["--task", "review"], /형식/],
     ["잘못된 상태", ["--status", "아무거나"], /--status/],
     ["없는 결정 기록", ["--decision", "decisions/999.md"], /찾을 수 없습니다/],
   ]) {

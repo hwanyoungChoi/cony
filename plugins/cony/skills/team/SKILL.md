@@ -31,7 +31,7 @@ description: cony 에이전트 팀(planner, backend-dev, client-dev, tester)이 
 node "{이 스킬 디렉토리}/board.mjs" --init --goal "계산기" --spec specs/calculator.md
 
 # 이후 단계마다, 바뀐 것만 옵션으로
-node "{이 스킬 디렉토리}/board.mjs" --task 1=done --task 2=doing:client-dev --now "client-dev가 태스크 2 구현 중"
+node "{이 스킬 디렉토리}/board.mjs" --task 1=done --task 2=progress:client-dev --now "client-dev가 태스크 2 구현 중"
 node "{이 스킬 디렉토리}/board.mjs" --decision decisions/004-scope.md
 node "{이 스킬 디렉토리}/board.mjs" --status "사용자 대기" --attention "언매치 시 채팅 기록 처리" --blocked none
 node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
@@ -40,7 +40,7 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 | 옵션 | 값 |
 |---|---|
 | `--status` | 진행 중 / 사용자 대기 / 완료 / 중단됨 |
-| `--task` | `N=done`, `N=doing[:담당]`, `N=todo`. done·todo는 스펙 체크박스에도 반영된다 |
+| `--task` | `N=todo`, `N=progress[:담당]`, `N=review[:담당]`, `N=done`. done·todo는 스펙 체크박스에도 반영된다 |
 | `--now` | 지금 하는 일 한두 줄 |
 | `--decision` | ADR 파일 경로. 제목과 "결정" 줄을 읽어 최근 결정 맨 위에 추가 |
 | `--attention`, `--blocked` | 여러 번 주면 목록, `none`이면 "없음" |
@@ -116,10 +116,12 @@ node "{이 스킬 디렉토리}/board.mjs" --pr "[#14](링크) · CI 진행 중"
 ### 2. 태스크 반복
 태스크마다 아래를 반복한다.
 
-1. **개발**: 담당에 맞춰 `backend-dev`, `client-dev`를 부른다. API 계약이 확정돼 있으면 병렬로, 아니면 backend 먼저. 계약이 바뀌면 반드시 client에 전달한다.
-2. **화면 확인**: 화면이 바뀌었으면 리드가 직접 실행해 client-dev가 준 확인 항목을 눌러본다(웹은 브라우저, 앱은 iOS 시뮬레이터). 못 했으면 log에 남긴다.
-3. **테스트**: `tester`를 부른다. 실패하면 지목된 담당이 고치고 다시 테스트한다. 2회 안에 안 풀리면 원인을 두고 토론하거나, 그래도 안 되면 "막힌 것"에 올리고 다음 태스크로 간다.
-4. **커밋**: 작업 브랜치에 태스크마다 의미 단위로 커밋한다. 설정 변경과 기능 변경은 나누고, 메시지는 영문 prefix + 한글 본문으로 쓴다. 커밋할 때마다 작업 브랜치를 push해서 다른 기기에서도 진행 상황을 받아볼 수 있게 한다.
+보드의 칸반은 이 흐름을 따른다: **TODO → PROGRESS → REVIEW → DONE**. BACKLOG는 스펙의 "다음 단계 후보"에서 자동으로 채워진다.
+
+1. **개발** (`--task N=progress:{담당}`): 담당에 맞춰 `backend-dev`, `client-dev`를 부른다. API 계약이 확정돼 있으면 병렬로, 아니면 backend 먼저. 계약이 바뀌면 반드시 client에 전달한다.
+2. **화면 확인** (`--task N=review:리드`): 구현이 끝나면 REVIEW로 옮긴다. 화면이 바뀌었으면 리드가 직접 실행해 client-dev가 준 확인 항목을 눌러본다(웹은 브라우저, 앱은 iOS 시뮬레이터). 못 했으면 log에 남긴다.
+3. **테스트** (`--task N=review:tester`): `tester`를 부른다. 실패하면 지목된 담당이 고치는 동안 PROGRESS로 되돌리고, 고친 뒤 다시 REVIEW로 옮겨 테스트한다. 2회 안에 안 풀리면 원인을 두고 토론하거나, 그래도 안 되면 "막힌 것"에 올리고 다음 태스크로 간다.
+4. **커밋** (`--task N=done`): 테스트를 통과하고 커밋까지 끝나야 DONE이다. 작업 브랜치에 태스크마다 의미 단위로 커밋한다. 설정 변경과 기능 변경은 나누고, 메시지는 영문 prefix + 한글 본문으로 쓴다. 커밋할 때마다 작업 브랜치를 push해서 다른 기기에서도 진행 상황을 받아볼 수 있게 한다.
 5. **기록**: 스펙의 태스크 체크박스, board, log를 갱신한다.
 
 ### 3. PR과 머지

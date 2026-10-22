@@ -18,7 +18,7 @@ claude plugin install cony@conychoi-plugins
 /cony:board                       # 진행 상황을 브라우저 대시보드로 (실시간 갱신)
 ```
 
-`/cony:board`는 `.cony/`를 감시하는 로컬 서버(`localhost:4747`)를 띄운다. 리드가 `board.md`를 고치는 즉시 진행률, 확인 필요·막힌 것 배너, 결정 기록이 갱신된다. 이 컴퓨터에서만 열리므로 폰에서는 아래 Remote Control을 쓴다.
+`/cony:board`는 `.cony/`를 감시하는 로컬 서버(`localhost:4747`)를 띄운다. 태스크는 **BACKLOG · TODO · PROGRESS · REVIEW · DONE** 칸반으로 보이고, 리드가 보드를 갱신하는 즉시 카드가 옮겨간다. 확인 필요·막힌 것 배너와 결정 기록도 함께 보인다. 이 컴퓨터에서만 열리므로 폰에서는 아래 Remote Control을 쓴다.
 
 ## 하네스 구성
 

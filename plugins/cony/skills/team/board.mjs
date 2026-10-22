@@ -6,7 +6,8 @@
 //               --now "client-dev가 태스크 2 구현 중" --decision decisions/004-scope.md \
 //               --attention "질문" --blocked none --pr "#14 · CI 진행 중"
 //
-// --task 값: N=done | N=doing[:담당] | N=todo
+// --task 값: N=todo | N=progress[:담당] | N=review[:담당] | N=done   (doing 은 progress 와 같다)
+// 칸반: BACKLOG(스펙의 "다음 단계 후보") · TODO · PROGRESS · REVIEW · DONE
 // --attention, --blocked: 여러 번 주면 목록, none 이면 "없음"
 // --decision: ADR 파일에서 제목과 결정을 읽어 "최근 결정" 맨 위에 추가
 
@@ -16,9 +17,11 @@ import { parseArgs } from "node:util";
 
 import { findConyRoot } from "../../hooks/lib.mjs";
 
-const SECTIONS = ["태스크", "지금 하는 일", "최근 결정", "사용자 확인 필요", "막힌 것", "PR"];
+const SECTIONS = ["태스크", "백로그", "지금 하는 일", "최근 결정", "사용자 확인 필요", "막힌 것", "PR"];
 const STATUSES = ["진행 중", "사용자 대기", "완료", "중단됨"];
-const TASK_LINE = /^- \[([ xX])\] (\d+)\. (.*?)(?: ← .*)?$/;
+// 태스크 줄: "- [ ] 2. 제목 [PROGRESS · client-dev]". 예전 형식 "← 진행 중 (담당)"도 읽는다.
+const TASK_LINE = /^- \[([ xX])\] (\d+)\. (.*?)(?: \[(?:PROGRESS|REVIEW)[^\]]*\]| ← .*)?$/;
+const STATE_ALIASES = { todo: "todo", doing: "progress", progress: "progress", review: "review", done: "done" };
 
 const { values } = parseArgs({
   options: {
@@ -82,10 +85,19 @@ function tasksFromSpec(specRel) {
   return lines.join("\n");
 }
 
+function backlogFromSpec(specRel) {
+  const specPath = join(conyDir, specRel);
+  if (!existsSync(specPath)) return "없음";
+  const section = readFileSync(specPath, "utf8").split(/^## /m).find((chunk) => chunk.startsWith("다음 단계 후보"));
+  const items = (section ?? "").split("\n").filter((line) => /^\s*- /.test(line)).map((line) => line.trim());
+  return items.length ? items.join("\n") : "없음";
+}
+
 function setTask(tasksText, spec, value) {
-  const match = value.match(/^(\d+)=(done|doing|todo)(?::(.+))?$/);
-  if (!match) fail(`--task 형식은 N=done | N=doing[:담당] | N=todo 입니다: ${value}`);
-  const [, number, state, owner] = match;
+  const match = value.match(/^(\d+)=(\w+)(?::(.+))?$/);
+  const state = match && STATE_ALIASES[match[2]];
+  if (!state) fail(`--task 형식은 N=todo | N=progress[:담당] | N=review[:담당] | N=done 입니다: ${value}`);
+  const [, number, , owner] = match;
   let found = false;
   const updated = tasksText
     .split("\n")
@@ -94,14 +106,14 @@ function setTask(tasksText, spec, value) {
       if (!task || task[2] !== number) return line;
       found = true;
       const box = state === "done" ? "x" : " ";
-      const doing = state === "doing" ? ` ← 진행 중${owner ? ` (${owner})` : ""}` : "";
-      return `- [${box}] ${number}. ${task[3]}${doing}`;
+      const tag = state === "progress" || state === "review" ? ` [${state.toUpperCase()}${owner ? ` · ${owner}` : ""}]` : "";
+      return `- [${box}] ${number}. ${task[3]}${tag}`;
     })
     .join("\n");
   if (!found) fail(`보드에 태스크 ${number}이(가) 없습니다.`);
 
   // 완료·되돌림은 스펙 체크박스에도 반영한다
-  if (spec && state !== "doing") {
+  if (spec && (state === "done" || state === "todo")) {
     const specPath = join(conyDir, spec);
     if (existsSync(specPath)) {
       const specText = readFileSync(specPath, "utf8");
@@ -143,6 +155,7 @@ if (values.init) {
   if (values.spec) board.spec = values.spec;
 }
 
+if (board.spec) board.sections["백로그"] = backlogFromSpec(board.spec);
 if (values.goal) board.goal = values.goal;
 if (values.status) {
   if (!STATUSES.includes(values.status)) fail(`--status 는 ${STATUSES.join(" | ")} 중 하나입니다.`);
@@ -164,5 +177,11 @@ if (values.pr) board.sections.PR = values.pr;
 writeFileSync(boardPath, renderBoard(board));
 
 const tasks = board.sections["태스크"].split("\n").filter((l) => TASK_LINE.test(l));
-const done = tasks.filter((l) => /^- \[[xX]\]/.test(l)).length;
-console.log(`board: ${board.status} · 태스크 ${done}/${tasks.length} · ${board.sections["지금 하는 일"].split("\n")[0]}`);
+const count = (pattern) => tasks.filter((l) => pattern.test(l)).length;
+const done = count(/^- \[[xX]\]/);
+const review = count(/\[REVIEW/);
+const progress = count(/\[PROGRESS| ← /);
+const todo = tasks.length - done - review - progress;
+console.log(
+  `board: ${board.status} · TODO ${todo} · PROGRESS ${progress} · REVIEW ${review} · DONE ${done} · ${board.sections["지금 하는 일"].split("\n")[0]}`,
+);

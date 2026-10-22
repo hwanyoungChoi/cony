@@ -91,6 +91,31 @@
   .alert.blocked h2 { color: var(--danger); }
   .alert :where(p, ul) { margin: 0; }
 
+  .kanban-wrap { margin-top: 16px; overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 4px; }
+  .kanban { display: grid; grid-template-columns: repeat(5, minmax(190px, 1fr)); gap: 12px; min-width: 980px; }
+  .column { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; scroll-snap-align: start; min-height: 120px; }
+  .column-head { display: flex; align-items: center; gap: 8px; margin: 2px 2px 10px; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--muted); }
+  .column-head .swatch { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .column-head .n { margin-left: auto; font-variant-numeric: tabular-nums; background: var(--bg); border-radius: 999px; padding: 0 8px; }
+  .column[data-col="todo"] .swatch { background: var(--muted); }
+  .column[data-col="progress"] .swatch { background: var(--accent); }
+  .column[data-col="review"] .swatch { background: var(--warn); }
+  .column[data-col="done"] .swatch { background: var(--ok); }
+  .column[data-col="backlog"] { background: transparent; border-style: dashed; }
+  .cards { display: grid; gap: 8px; }
+  .task-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 11px; font-size: 13px; line-height: 1.45; }
+  .column[data-col="progress"] .task-card { border-left: 3px solid var(--accent); }
+  .column[data-col="review"] .task-card { border-left: 3px solid var(--warn); }
+  .column[data-col="done"] .task-card { color: var(--muted); }
+  .column[data-col="backlog"] .task-card { background: var(--bg); color: var(--muted); }
+  .task-title code { background: var(--bg); padding: 0 4px; border-radius: 4px; font-size: 12px; }
+  .column[data-col="backlog"] .task-title { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .task-key { font-size: 11px; font-weight: 700; color: var(--muted); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .chip { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--bg); color: var(--muted); }
+  .chip.owner { background: var(--accent-soft); color: var(--accent); }
+  .column[data-col="review"] .chip.owner { background: var(--warn-soft); color: var(--warn); }
+  .column-empty { font-size: 12px; color: var(--muted); padding: 6px 2px; }
   .grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; margin-top: 16px; }
   @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px 22px 18px; min-width: 0; }
@@ -148,6 +173,10 @@
 
   <div class="alerts" id="alerts"></div>
 
+  <div class="kanban-wrap">
+    <section class="kanban" id="kanban" aria-label="태스크 칸반"></section>
+  </div>
+
   <div class="grid">
     <section class="card">
       <div class="md" id="board"></div>
@@ -188,6 +217,80 @@
       result[title] = newline === -1 ? "" : chunk.slice(newline + 1).trim();
     }
     return result;
+  }
+
+  const COLUMNS = [
+    ["backlog", "BACKLOG"],
+    ["todo", "TODO"],
+    ["progress", "PROGRESS"],
+    ["review", "REVIEW"],
+    ["done", "DONE"],
+  ];
+
+  function parseTask(line) {
+    const m = line.match(/^- \[([ xX])\] (\d+)\. (.*?)(?: \[(PROGRESS|REVIEW)(?: · ([^\]]+))?\]| ← [^(]*(?:\((.+)\))?)?\s*$/);
+    if (!m) return null;
+    const [, box, number, rawTitle, tag, tagOwner, legacyOwner] = m;
+    const legacy = !tag && / ← /.test(line);
+    const col = box.trim() ? "done" : tag ? tag.toLowerCase() : legacy ? "progress" : "todo";
+    const ac = (rawTitle.match(/\((AC-[^)]+)\)/) || [])[1] || "";
+    const title = rawTitle.replace(/\s*\(AC-[^)]+\)/, "").trim();
+    return { col, key: `#${number}`, title, ac, owner: tagOwner || legacyOwner || "" };
+  }
+
+  function parseBacklog(text) {
+    if (isEmptySection(text)) return [];
+    return text.split("\n").filter((l) => /^\s*- /.test(l)).map((l) => ({
+      col: "backlog",
+      key: "",
+      title: l.replace(/^\s*- /, "").trim(),
+      ac: "",
+      owner: "",
+    }));
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function renderKanban(cards) {
+    const kanban = document.getElementById("kanban");
+    kanban.replaceChildren();
+    for (const [col, label] of COLUMNS) {
+      const items = cards.filter((c) => c.col === col);
+      const column = el("div", "column");
+      column.dataset.col = col;
+      const head = el("div", "column-head");
+      head.append(el("span", "swatch"), el("span", "", label), el("span", "n", String(items.length)));
+      const list = el("div", "cards");
+      if (!items.length) list.append(el("div", "column-empty", "비어 있음"));
+      for (const card of items) {
+        const node = el("article", "task-card");
+        if (card.key) node.append(el("div", "task-key", card.key));
+        const title = el("div", "task-title");
+        // 제목 안의 `코드`, **강조** 같은 인라인 마크다운만 그린다
+        if (window.marked && window.DOMPurify) title.innerHTML = DOMPurify.sanitize(marked.parseInline(card.title));
+        else title.textContent = card.title;
+        if (card.col === "backlog") title.title = card.title;
+        node.append(title);
+        const chips = el("div", "chips");
+        if (card.owner) chips.append(el("span", "chip owner", card.owner));
+        if (card.ac) chips.append(el("span", "chip", card.ac));
+        if (chips.childElementCount) node.append(chips);
+        list.append(node);
+      }
+      column.append(head, list);
+      kanban.append(column);
+    }
+  }
+
+  function withoutSections(md, names) {
+    const [head, ...chunks] = md.split(/^## /m);
+    const kept = chunks.filter((chunk) => !names.includes(chunk.slice(0, chunk.indexOf("\n")).trim()));
+    return [head, ...kept.map((c) => `## ${c}`)].join("");
   }
 
   function isEmptySection(text) {
@@ -245,9 +348,10 @@
     document.title = `${status ? `[${status}] ` : ""}${goal || "cony board"}`;
 
     const parts = sections(md);
-    const tasks = parts["태스크"] || "";
-    const total = (tasks.match(/^- \[[ xX]\]/gm) || []).length;
-    const done = (tasks.match(/^- \[[xX]\]/gm) || []).length;
+    const taskCards = (parts["태스크"] || "").split("\n").map(parseTask).filter(Boolean);
+    renderKanban([...parseBacklog(parts["백로그"]), ...taskCards]);
+    const total = taskCards.length;
+    const done = taskCards.filter((c) => c.col === "done").length;
     const percent = total ? Math.round((done / total) * 100) : 0;
     const bar = document.getElementById("bar");
     bar.className = "bar" + (total && done === total ? " done" : "");
@@ -264,14 +368,11 @@
     document.getElementById("alerts").innerHTML = alerts.join("");
 
     if (md.trim()) {
-      const body = md.replace(/^#\s+.+$/m, "").replace(/^>\s*.+$/m, "");
-      const board = document.getElementById("board");
-      board.innerHTML = renderMarkdown(body);
-      for (const li of board.querySelectorAll("li")) {
-        if (li.textContent.includes("← 진행 중")) li.classList.add("doing");
-        const box = li.querySelector(":scope > input[type=checkbox]");
-        if (box && box.checked) li.classList.add("checked");
-      }
+      const body = withoutSections(md, ["태스크", "백로그", "사용자 확인 필요", "막힌 것"])
+        .replace(/^#\s+.+$/m, "")
+        .replace(/^>\s*.+$/m, "")
+        .replace(/<!-- spec: .+? -->/, "");
+      document.getElementById("board").innerHTML = renderMarkdown(body);
     }
 
     const list = document.getElementById("decisions");
