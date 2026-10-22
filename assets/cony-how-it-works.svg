@@ -1,0 +1,199 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1100 540" width="1100" height="540" role="img" aria-label="cony 동작 방식: 리드가 진행하는 토론으로 결정하고, 칸반으로 진행하며, hook이 위험한 명령을 막고, 사용자는 폰으로 보고를 받는다">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EEF1FF"/>
+      <stop offset="1" stop-color="#FDF2F8"/>
+    </linearGradient>
+    <g id="rabbit" stroke="#2B2B2B" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+      <ellipse cx="-17" cy="-64" rx="11" ry="34" fill="#FFFFFF" transform="rotate(-12 -17 -64)"/>
+      <ellipse cx="-17" cy="-62" rx="5" ry="22" fill="#FFC9D6" stroke="none" transform="rotate(-12 -17 -62)"/>
+      <ellipse cx="17" cy="-64" rx="11" ry="34" fill="#FFFFFF" transform="rotate(12 17 -64)"/>
+      <ellipse cx="17" cy="-62" rx="5" ry="22" fill="#FFC9D6" stroke="none" transform="rotate(12 17 -62)"/>
+      <path d="M-34 68 C-36 40 -24 28 0 28 C24 28 36 40 34 68 C33 90 20 98 0 98 C-20 98 -33 90 -34 68 Z" fill="#FFFFFF"/>
+      <ellipse cx="-15" cy="98" rx="13" ry="7" fill="#FFFFFF"/>
+      <ellipse cx="15" cy="98" rx="13" ry="7" fill="#FFFFFF"/>
+      <ellipse cx="0" cy="0" rx="44" ry="38" fill="#FFFFFF"/>
+      <ellipse cx="-15" cy="-2" rx="3.8" ry="5" fill="#2B2B2B" stroke="none"/>
+      <ellipse cx="15" cy="-2" rx="3.8" ry="5" fill="#2B2B2B" stroke="none"/>
+      <circle cx="-13.8" cy="-4" r="1.3" fill="#FFFFFF" stroke="none"/>
+      <circle cx="16.2" cy="-4" r="1.3" fill="#FFFFFF" stroke="none"/>
+      <ellipse cx="-27" cy="11" rx="7.5" ry="4.5" fill="#FFC1CF" stroke="none"/>
+      <ellipse cx="27" cy="11" rx="7.5" ry="4.5" fill="#FFC1CF" stroke="none"/>
+      <path d="M-5 9 Q-2.5 13 0 9 Q2.5 13 5 9" fill="none" stroke-width="2.5"/>
+    </g>
+    <path id="bubble" d="M-62 -17 H62 a9 9 0 0 1 9 9 V8 a9 9 0 0 1 -9 9 H10 L0 29 L-8 17 H-62 a9 9 0 0 1 -9 -9 V-8 a9 9 0 0 1 9 -9 Z"/>
+  </defs>
+
+  <rect width="1100" height="540" rx="28" fill="url(#bg)"/>
+
+  <g font-family="-apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', 'Segoe UI', sans-serif" font-weight="700" text-anchor="middle">
+
+    <!-- ① 토론 테이블 -->
+    <g fill="#2B2B2B" opacity=".07"><ellipse cx="440" cy="438" rx="245" ry="16"/></g>
+
+    <!-- rabbits behind table -->
+    <use href="#rabbit" xlink:href="#rabbit" transform="translate(255 232)"/>
+    <use href="#rabbit" xlink:href="#rabbit" transform="translate(348 226)"/>
+    <use href="#rabbit" xlink:href="#rabbit" transform="translate(532 226)"/>
+    <use href="#rabbit" xlink:href="#rabbit" transform="translate(625 232)"/>
+    <!-- lead: bigger, headset -->
+    <g transform="translate(440 214) scale(1.12)">
+      <use href="#rabbit" xlink:href="#rabbit"/>
+      <path d="M-44 -6 C-44 -50 44 -50 44 -6" fill="none" stroke="#2B2B2B" stroke-width="5" stroke-linecap="round"/>
+      <rect x="-52" y="-14" width="13" height="22" rx="6" fill="#4C4C59" stroke="#2B2B2B" stroke-width="3"/>
+      <rect x="39" y="-14" width="13" height="22" rx="6" fill="#4C4C59" stroke="#2B2B2B" stroke-width="3"/>
+      <path d="M-46 8 C-44 26 -30 30 -16 26" fill="none" stroke="#2B2B2B" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="-14" cy="26" r="4" fill="#4C4C59" stroke="#2B2B2B" stroke-width="2.5"/>
+    </g>
+
+    <!-- role scarves -->
+    <g stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round">
+      <path transform="translate(255 232)" d="M-30 32 Q0 46 30 32 L28 41 Q0 55 -28 41 Z" fill="#7C3AED"/>
+      <path transform="translate(348 226)" d="M-30 32 Q0 46 30 32 L28 41 Q0 55 -28 41 Z" fill="#3B5BDB"/>
+      <path transform="translate(532 226)" d="M-30 32 Q0 46 30 32 L28 41 Q0 55 -28 41 Z" fill="#2F9E44"/>
+      <path transform="translate(625 232)" d="M-30 32 Q0 46 30 32 L28 41 Q0 55 -28 41 Z" fill="#F08C00"/>
+      <path transform="translate(440 214) scale(1.12)" d="M-30 32 Q0 46 30 32 L28 41 Q0 55 -28 41 Z" fill="#4C4C59"/>
+    </g>
+
+    <!-- table -->
+    <g stroke="#2B2B2B" stroke-width="3.5" stroke-linejoin="round">
+      <path d="M205 350 V382 A235 56 0 0 0 675 382 V350" fill="#C8A27A"/>
+      <ellipse cx="440" cy="350" rx="235" ry="56" fill="#E7C9A5"/>
+    </g>
+    <!-- papers on table -->
+    <g stroke="#2B2B2B" stroke-width="2.5" stroke-linejoin="round" font-size="11">
+      <g transform="translate(345 352) rotate(-8)">
+        <rect x="-34" y="-20" width="68" height="40" rx="4" fill="#FFFFFF"/>
+        <text x="0" y="-4" fill="#2B2B2B" stroke="none" font-family="ui-monospace, Menlo, monospace">spec.md</text>
+        <path d="M-22 6 H22 M-22 13 H12" stroke-width="2" stroke="#B9B9C6"/>
+      </g>
+      <g transform="translate(535 354) rotate(6)">
+        <rect x="-38" y="-22" width="76" height="44" rx="4" fill="#FFFFFF"/>
+        <text x="0" y="-6" fill="#2B2B2B" stroke="none">ADR-003</text>
+        <path d="M-26 4 H8 M-26 11 H2" stroke-width="2" stroke="#B9B9C6"/>
+        <g transform="translate(22 8) rotate(-14)">
+          <rect x="-17" y="-10" width="34" height="20" rx="4" fill="none" stroke="#E03131" stroke-width="2.5"/>
+          <text x="0" y="5" fill="#E03131" stroke="none" font-size="11">결정</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- vote paddles -->
+    <g font-size="14">
+      <g transform="translate(255 0)">
+        <path d="M0 336 V302" stroke="#8B5E34" stroke-width="5" stroke-linecap="round"/>
+        <rect x="-30" y="276" width="60" height="28" rx="7" fill="#7C3AED" stroke="#2B2B2B" stroke-width="3"/>
+        <text x="0" y="295" fill="#FFFFFF">제안</text>
+      </g>
+      <g transform="translate(348 0)">
+        <path d="M0 330 V296" stroke="#8B5E34" stroke-width="5" stroke-linecap="round"/>
+        <rect x="-30" y="270" width="60" height="28" rx="7" fill="#2F9E44" stroke="#2B2B2B" stroke-width="3"/>
+        <text x="0" y="289" fill="#FFFFFF">찬성</text>
+      </g>
+      <g transform="translate(532 0)">
+        <path d="M0 330 V296" stroke="#8B5E34" stroke-width="5" stroke-linecap="round"/>
+        <rect x="-30" y="270" width="60" height="28" rx="7" fill="#E03131" stroke="#2B2B2B" stroke-width="3"/>
+        <text x="0" y="289" fill="#FFFFFF">반대</text>
+      </g>
+      <g transform="translate(625 0)">
+        <path d="M0 336 V302" stroke="#8B5E34" stroke-width="5" stroke-linecap="round"/>
+        <rect x="-36" y="276" width="72" height="28" rx="7" fill="#F08C00" stroke="#2B2B2B" stroke-width="3"/>
+        <text x="0" y="295" fill="#FFFFFF" font-size="13">조건부</text>
+      </g>
+    </g>
+
+    <!-- role tags under table -->
+    <g font-size="12">
+      <rect x="232" y="396" width="46" height="20" rx="10" fill="#7C3AED"/><text x="255" y="410" fill="#FFFFFF">PM</text>
+      <rect x="325" y="402" width="46" height="20" rx="10" fill="#3B5BDB"/><text x="348" y="416" fill="#FFFFFF">FE</text>
+      <rect x="410" y="404" width="60" height="20" rx="10" fill="#4C4C59"/><text x="440" y="418" fill="#FFFFFF">리드</text>
+      <rect x="509" y="402" width="46" height="20" rx="10" fill="#2F9E44"/><text x="532" y="416" fill="#FFFFFF">BE</text>
+      <rect x="602" y="396" width="46" height="20" rx="10" fill="#F08C00"/><text x="625" y="410" fill="#FFFFFF">QA</text>
+    </g>
+
+    <!-- bubbles -->
+    <g stroke="#2B2B2B" stroke-width="2.5" stroke-linejoin="round" font-size="13">
+      <g transform="translate(330 84)">
+        <use href="#bubble" xlink:href="#bubble" fill="#FFFFFF" transform="translate(0 0) scale(1 1)"/>
+        <text x="0" y="5" fill="#4C4C59" stroke="none">근거로 결정할게요</text>
+      </g>
+      <g transform="translate(600 92)">
+        <use href="#bubble" xlink:href="#bubble" fill="#FFFFFF"/>
+        <text x="0" y="5" fill="#E03131" stroke="none">동시 요청이면요?</text>
+      </g>
+    </g>
+
+    <text x="440" y="470" font-size="15" fill="#2B2B2B">① 리드가 의견을 모아 토론으로 결정</text>
+    <text x="440" y="490" font-size="12" font-weight="500" fill="#6B6B76">에이전트끼리는 직접 대화하지 않고, 결정과 검토 원문이 기록으로 남는다</text>
+
+    <!-- ② 칸반 -->
+    <g transform="translate(728 28)">
+      <rect width="344" height="176" rx="14" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3.5"/>
+      <text x="16" y="26" font-size="14" font-weight="800" fill="#2B2B2B" text-anchor="start">cony board</text>
+      <g font-size="8.5" font-weight="800" fill="#6B6B76" text-anchor="start">
+        <g transform="translate(12 38)"><rect width="74" height="96" rx="8" fill="#F6F6FA"/><circle cx="9" cy="12" r="3" fill="#9A9AA6"/><text x="15" y="15">TODO</text><rect x="6" y="22" width="62" height="16" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/></g>
+        <g transform="translate(94 38)"><rect width="74" height="96" rx="8" fill="#F6F6FA"/><circle cx="9" cy="12" r="3" fill="#3B5BDB"/><text x="15" y="15">PROGRESS</text><rect x="6" y="22" width="62" height="16" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/><rect x="6" y="22" width="4" height="16" rx="2" fill="#3B5BDB"/></g>
+        <g transform="translate(176 38)"><rect width="74" height="96" rx="8" fill="#F6F6FA"/><circle cx="9" cy="12" r="3" fill="#F08C00"/><text x="15" y="15">REVIEW</text><rect x="6" y="22" width="62" height="16" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/><rect x="6" y="22" width="4" height="16" rx="2" fill="#F08C00"/></g>
+        <g transform="translate(258 38)"><rect width="74" height="96" rx="8" fill="#F6F6FA"/><circle cx="9" cy="12" r="3" fill="#2F9E44"/><text x="15" y="15">DONE</text><rect x="6" y="22" width="62" height="16" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/><rect x="6" y="44" width="62" height="16" rx="4" fill="#FFFFFF" stroke="#E2E2EA"/><path d="M54 28 l3 3 l6 -6 M54 50 l3 3 l6 -6" fill="none" stroke="#2F9E44" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+      </g>
+      <!-- review -> done -->
+      <path d="M246 68 C254 60 260 60 268 62" fill="none" stroke="#2F9E44" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M270 62 l-8 -4 l1 8 Z" fill="#2F9E44"/>
+      <!-- review fails -> back to progress -->
+      <path d="M213 82 C213 120 133 120 133 86" fill="none" stroke="#E03131" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="5 4"/>
+      <path d="M133 80 l-5 9 h10 Z" fill="#E03131"/>
+      <text x="173" y="128" font-size="10" fill="#E03131">qa 실패 → 다시</text>
+      <text x="172" y="160" font-size="11" font-weight="600" fill="#6B6B76">폰에서도 /cony:status 로 확인</text>
+    </g>
+    <text x="900" y="226" font-size="15" fill="#2B2B2B">② 칸반으로 진행 상황 공유</text>
+
+    <!-- ③ hook guard -->
+    <g transform="translate(0 0)">
+      <rect x="990" y="292" width="78" height="150" rx="10" fill="#FFE8CC" stroke="#2B2B2B" stroke-width="3.5"/>
+      <path d="M990 330 A39 39 0 0 1 1068 330" fill="none" stroke="#2B2B2B" stroke-width="3"/>
+      <text x="1029" y="322" font-size="13" fill="#2B2B2B" font-family="ui-monospace, Menlo, monospace">main</text>
+      <circle cx="1056" cy="378" r="4" fill="#2B2B2B"/>
+      <g fill="#2B2B2B" opacity=".07"><ellipse cx="915" cy="445" rx="46" ry="8"/></g>
+      <use href="#rabbit" xlink:href="#rabbit" transform="translate(915 345)"/>
+      <path d="M902 337 l8 3 M928 337 l-8 3" stroke="#2B2B2B" stroke-width="3" stroke-linecap="round"/>
+      <path transform="translate(915 345)" d="M-30 32 Q0 46 30 32 L28 41 Q0 55 -28 41 Z" fill="#4C4C59" stroke="#2B2B2B" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M887 380 H943 V410 C943 432 927 444 915 450 C903 444 887 432 887 410 Z" fill="#748FFC" stroke="#2B2B2B" stroke-width="3.5" stroke-linejoin="round"/>
+      <text x="915" y="418" font-size="15" fill="#FFFFFF" font-family="ui-monospace, Menlo, monospace">hook</text>
+      <!-- blocked command -->
+      <g transform="translate(770 372) rotate(-6)">
+        <rect x="-62" y="-16" width="124" height="32" rx="6" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="3"/>
+        <text x="0" y="5" font-size="11" fill="#2B2B2B" font-family="ui-monospace, Menlo, monospace">git push --force</text>
+        <path d="M-58 -12 L58 12 M-58 12 L58 -12" stroke="#E03131" stroke-width="3.5" stroke-linecap="round" opacity=".85"/>
+      </g>
+      <g transform="translate(790 426) rotate(4)">
+        <rect x="-46" y="-13" width="92" height="26" rx="6" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="2.5"/>
+        <text x="-6" y="5" font-size="11" fill="#2B2B2B" font-family="ui-monospace, Menlo, monospace">lint 오류</text>
+        <circle cx="32" cy="0" r="7" fill="#E03131"/>
+        <path d="M29 -3 l6 6 M35 -3 l-6 6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+      </g>
+    </g>
+    <text x="900" y="476" font-size="15" fill="#2B2B2B">③ hook이 위험한 일을 막음</text>
+    <text x="900" y="496" font-size="12" font-weight="500" fill="#6B6B76">CI 통과 전 머지, 지침 파일 수정도 막는다</text>
+
+    <!-- ④ user on sofa -->
+    <g>
+      <path d="M26 448 V408 a14 14 0 0 1 14 -14 H170 a14 14 0 0 1 14 14 V448 Z" fill="#B197FC" stroke="#2B2B2B" stroke-width="3.5" stroke-linejoin="round"/>
+      <rect x="18" y="440" width="174" height="34" rx="12" fill="#9775FA" stroke="#2B2B2B" stroke-width="3.5"/>
+      <use href="#rabbit" xlink:href="#rabbit" transform="translate(105 380) scale(.82)"/>
+      <rect x="120" y="402" width="22" height="36" rx="5" fill="#2B2B2B" transform="rotate(-14 131 420)"/>
+      <rect x="123" y="406" width="16" height="26" rx="3" fill="#8EA4FF" transform="rotate(-14 131 420)"/>
+      <ellipse cx="122" cy="430" rx="7" ry="6" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="2.5"/>
+      <g transform="translate(130 284)">
+        <rect x="-74" y="-22" width="148" height="44" rx="12" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="2.5"/>
+        <circle cx="-54" cy="0" r="10" fill="#2F9E44"/>
+        <path d="M-58 0 l3 3 l6 -6" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="8" y="-3" font-size="12" fill="#2B2B2B">PR 머지 완료</text>
+        <text x="8" y="13" font-size="10" font-weight="500" fill="#6B6B76">결정 2건 확인해 주세요</text>
+      </g>
+      <path d="M126 306 l4 14 l8 -12" fill="#FFFFFF" stroke="#2B2B2B" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M124 306 H140" stroke="#FFFFFF" stroke-width="4"/>
+    </g>
+    <text x="105" y="500" font-size="15" fill="#2B2B2B">④ 나는 목표만 주고</text>
+    <text x="105" y="520" font-size="15" fill="#2B2B2B">보고를 받는다</text>
+  </g>
+</svg>
