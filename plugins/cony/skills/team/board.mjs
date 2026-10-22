@@ -10,6 +10,7 @@
 // 칸반: BACKLOG(스펙의 "다음 단계 후보") · TODO · PROGRESS · REVIEW · DONE
 // --attention, --blocked: 여러 번 주면 목록, none 이면 "없음"
 // --decision: ADR 파일에서 제목과 결정을 읽어 "최근 결정" 맨 위에 추가
+// --lead: 리드 세션의 데스크톱 앱 세션 ID(local_...). /cony:status 가 리드 상태를 확인하고 재개 메시지를 보낼 때 쓴다
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -36,6 +37,7 @@ const { values } = parseArgs({
     blocked: { type: "string", multiple: true },
     pr: { type: "string" },
     root: { type: "string" },
+    lead: { type: "string" },
   },
 });
 
@@ -60,19 +62,20 @@ function parseBoard(text) {
   const goal = (head.match(/^#\s+(.+)$/m) || [])[1] ?? "";
   const status = (head.match(/상태:\s*([^·\n]+)/) || [])[1]?.trim() ?? "진행 중";
   const spec = (text.match(/<!-- spec: (.+?) -->/) || [])[1] ?? null;
+  const lead = (text.match(/<!-- lead: (.+?) -->/) || [])[1] ?? null;
   const sections = Object.fromEntries(SECTIONS.map((name) => [name, "없음"]));
   for (const chunk of chunks) {
     const newline = chunk.indexOf("\n");
     const name = chunk.slice(0, newline).trim();
-    sections[name] = chunk.slice(newline + 1).replace(/<!-- spec: .+? -->/, "").trim();
+    sections[name] = chunk.slice(newline + 1).replace(/<!-- (spec|lead): .+? -->/g, "").trim();
   }
-  return { goal, status, spec, sections };
+  return { goal, status, spec, lead, sections };
 }
 
-function renderBoard({ goal, status, spec, sections }) {
+function renderBoard({ goal, status, spec, lead, sections }) {
   const body = SECTIONS.map((name) => `## ${name}\n${sections[name] || "없음"}`).join("\n\n");
-  const specLine = spec ? `\n\n<!-- spec: ${spec} -->` : "";
-  return `# ${goal}\n> 상태: ${status} · 마지막 업데이트: ${timestamp()}\n\n${body}${specLine}\n`;
+  const meta = [spec && `<!-- spec: ${spec} -->`, lead && `<!-- lead: ${lead} -->`].filter(Boolean).join("\n");
+  return `# ${goal}\n> 상태: ${status} · 마지막 업데이트: ${timestamp()}\n\n${body}${meta ? `\n\n${meta}` : ""}\n`;
 }
 
 function tasksFromSpec(specRel) {
@@ -155,6 +158,7 @@ if (values.init) {
   if (values.spec) board.spec = values.spec;
 }
 
+if (values.lead) board.lead = values.lead;
 if (board.spec) board.sections["백로그"] = backlogFromSpec(board.spec);
 if (values.goal) board.goal = values.goal;
 if (values.status) {

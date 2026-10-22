@@ -108,6 +108,19 @@ describe("board.mjs", () => {
     assert.doesNotMatch(read(dir, "board.md"), /AC-5: 식 표시줄/);
   });
 
+  test("리드 세션 ID를 기록하고 다른 갱신에도 유지한다", () => {
+    const dir = createProject();
+    board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md", "--lead", "local_abc-123");
+    board(dir, "--task", "1=done", "--now", "갱신");
+    const text = read(dir, "board.md");
+    assert.match(text, /<!-- lead: local_abc-123 -->/);
+    assert.match(text, /<!-- spec: specs\/calc\.md -->/);
+    assert.doesNotMatch(text, /## PR\n.*lead/);
+    board(dir, "--lead", "local_new");
+    assert.match(read(dir, "board.md"), /<!-- lead: local_new -->/);
+    assert.doesNotMatch(read(dir, "board.md"), /local_abc-123/);
+  });
+
   test("결정은 ADR에서 제목과 결정을 읽어 맨 위에 추가하고 중복은 없앤다", () => {
     const dir = createProject();
     board(dir, "--init", "--goal", "계산기");
