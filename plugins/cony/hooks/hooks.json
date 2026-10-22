@@ -1,5 +1,5 @@
 {
-  "description": "cony 하네스: 지침 파일 수정 차단, 위험 명령 차단, 수정 즉시 lint, 종료 전 lint+typecheck와 보드 상태 확인, 세션 시작 시 보드 주입, 세션 종료 시 보드를 '중단됨'으로 표시. .cony/ 가 있는 프로젝트에서만 동작한다.",
+  "description": "cony 하네스: 지침 파일 수정 차단, 위험 명령 차단, 비밀 파일 읽기 차단, 수정 즉시 lint, 종료 전 lint+typecheck와 보드 상태 확인, 세션 시작 시 보드 주입, 세션 종료 시 보드를 '중단됨'으로 표시. .cony/ 가 있는 프로젝트에서만 동작한다.",
   "hooks": {
     "SessionStart": [
       {
@@ -29,6 +29,16 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-bash.mjs\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Grep|Glob|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/guard-secrets.mjs\"",
             "timeout": 10
           }
         ]

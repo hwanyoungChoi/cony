@@ -98,6 +98,27 @@ describe("guard-instructions: 지침 파일 보호", () => {
   });
 });
 
+describe("guard-secrets: 비밀 파일", () => {
+  const project = createProject();
+  const outside = createProject({ cony: false });
+  const read = (file) => decisionOf(runHook("guard-secrets.mjs", { tool_name: "Read", cwd: project, tool_input: { file_path: file } }));
+  const bash = (command, cwd = project) => decisionOf(runHook("guard-secrets.mjs", { tool_name: "Bash", cwd, tool_input: { command } }));
+
+  for (const name of [".env", ".env.local", ".dev.vars", "server.pem", "credentials.json"]) {
+    test(`Read 차단: ${name}`, () => assert.equal(read(join(project, name)), "deny"));
+  }
+  test("예시 파일은 허용: .env.example", () => assert.equal(read(join(project, ".env.example")), "allow"));
+  test("일반 파일은 허용", () => assert.equal(read(join(project, "src", "index.ts")), "allow"));
+  test("cony 프로젝트가 아니면 관여하지 않음", () => assert.equal(read(join(outside, ".env")), "allow"));
+  for (const command of ["cat .dev.vars", "grep API_KEY .env.local", "source .env && node probe.mjs", "cat ./config/.env"]) {
+    test(`Bash 차단: ${command}`, () => assert.equal(bash(command), "deny"));
+  }
+  for (const command of ["cat .env.example", "pnpm test", "echo 'KEY=' >> .env.example"]) {
+    test(`Bash 허용: ${command}`, () => assert.equal(bash(command), "allow"));
+  }
+  test("cony 밖에서는 Bash도 관여하지 않음", () => assert.equal(bash("cat .env", outside), "allow"));
+});
+
 describe("guard-bash: 위험 명령", () => {
   const project = createProject();
   const outside = createProject({ cony: false });
