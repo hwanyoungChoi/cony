@@ -91,8 +91,6 @@ hook은 `.cony/` 디렉토리가 있는 프로젝트에서만 동작한다. 세�
 | 프리셋 | 역할 | 결정 (`decisions`) | 머지 (`merge`) |
 |---|---|---|---|
 | 개인 프로젝트 | 전원 build | team | auto |
-| 회사 프론트 (백엔드는 사내 팀) | be만 review | user | pr |
-| 채용 과제 | 전원 build | user | none |
 | 직접 고르기 | 역할별 선택 | | |
 
 ```json
