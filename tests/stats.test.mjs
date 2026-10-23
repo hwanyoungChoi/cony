@@ -54,6 +54,8 @@ test("이벤트·ADR·검토·log.md에서 흐름, 토론, 사람 개입, hook �
   );
   writeFileSync(join(cony, "decisions", "001.md"), "# ADR-001\n- 의견: fe(찬성) / be(반대, 근거)\n- 결정: A\n");
   writeFileSync(join(cony, "decisions", "002.md"), "# ADR-002\n- 상태: 뒤집힘(사용자)\n- 의견: fe(찬성)\n");
+  writeFileSync(join(cony, "decisions", "003.md"), "# ADR-003\n- 상태: 채택(사용자)\n");
+  writeFileSync(join(cony, "decisions", "004.md"), "# ADR-004\n- 상태: 제안됨 · 사용자 결정 대기\n");
   writeFileSync(join(cony, "reviews", "20261022-1000-be-adr-001.md"), "판정: 반대\n");
   writeFileSync(join(cony, "reviews", "20261022-1000-fe-adr-001.md"), "**판정**: 조건부 찬성\n");
   writeFileSync(join(cony, "handoffs", "20261022-1000-be-api.md"), "# 요청서\n");
@@ -63,7 +65,9 @@ test("이벤트·ADR·검토·log.md에서 흐름, 토론, 사람 개입, hook �
   assert.equal(s.cost.found, false);
   assert.deepEqual(s.flow, { done: 1, rollbacks: 1, bypasses: 1, avgCycleMin: 40 });
   assert.deepEqual(s.hooks, { "guard-bash": { deny: 2 } });
-  assert.equal(s.debate.adrs, 2);
+  assert.equal(s.debate.adrs, 4);
+  assert.equal(s.debate.decidedByUser, 1);
+  assert.equal(s.debate.pendingUser, 1);
   assert.equal(s.debate.adrsWithDissent, 1);
   assert.equal(s.debate.reversedByUser, 1);
   assert.deepEqual(s.debate.verdicts, { 찬성: 0, 조건부: 1, 반대: 1, 기타: 0 });

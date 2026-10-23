@@ -163,7 +163,18 @@ function debateStats(conyDir) {
   for (const r of reviews) verdicts[verdictOf(r)] += 1;
   const dissent = adrs.filter((a) => /의견[^\n]*(반대|조건)/.test(a)).length;
   const reversed = adrs.filter((a) => /상태:\s*뒤집힘/.test(a)).length;
-  return { adrs: adrs.length, reviews: reviews.length, verdicts, adrsWithDissent: dissent, reversedByUser: reversed, handoffs: list("handoffs").length };
+  const pendingUser = adrs.filter((a) => /상태:\s*제안됨/.test(a)).length;
+  const decidedByUser = adrs.filter((a) => /상태:\s*채택\(사용자\)/.test(a)).length;
+  return {
+    adrs: adrs.length,
+    reviews: reviews.length,
+    verdicts,
+    adrsWithDissent: dissent,
+    reversedByUser: reversed,
+    pendingUser,
+    decidedByUser,
+    handoffs: list("handoffs").length,
+  };
 }
 
 function peopleStats(conyDir) {

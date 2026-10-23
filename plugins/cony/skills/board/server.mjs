@@ -49,9 +49,12 @@ const ROLES = ["pm", "fe", "be", "qa"];
 function readTeam() {
   try {
     const team = JSON.parse(readFileSync(join(conyDir, "team.json"), "utf8"));
-    return Object.fromEntries(ROLES.map((role) => [role, ["build", "review", "off"].includes(team[role]) ? team[role] : "build"]));
+    return {
+      ...Object.fromEntries(ROLES.map((role) => [role, ["build", "review", "off"].includes(team[role]) ? team[role] : "build"])),
+      decisions: team.decisions === "user" ? "user" : "team",
+    };
   } catch {
-    return Object.fromEntries(ROLES.map((role) => [role, "build"]));
+    return { ...Object.fromEntries(ROLES.map((role) => [role, "build"])), decisions: "team" };
   }
 }
 

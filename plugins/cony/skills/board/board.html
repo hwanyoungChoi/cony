@@ -466,11 +466,13 @@
     const MODE_LABEL = { build: "구현", review: "검토", off: "제외" };
     const team = document.getElementById("team");
     team.replaceChildren();
-    for (const [role, mode] of Object.entries(data.team ?? {})) {
+    const { decisions = "team", ...roles } = data.team ?? {};
+    for (const [role, mode] of Object.entries(roles)) {
       const member = el("span", `member ${mode}`);
       member.append(el("span", `role ${role}`, role.toUpperCase()), el("span", "", MODE_LABEL[mode] ?? mode));
       team.append(member);
     }
+    team.append(el("span", "member", decisions === "user" ? "· 결정: 사용자" : "· 결정: 팀"));
 
     renderDocList("reviews", data.reviews);
     renderDocList("handoffs", data.handoffs);
@@ -616,6 +618,8 @@
       kvTable([
         ["결정 기록(ADR)", d.adrs],
         ["반대·조건부 의견이 있었던 결정", `${d.adrsWithDissent} (${pct}%)`],
+        ["사용자가 확정한 결정", d.decidedByUser],
+        ["사용자 결정 대기", d.pendingUser],
         ["사용자가 뒤집은 결정", d.reversedByUser],
         ["검토 원문", d.reviews],
         ["검토 판정: 찬성 · 조건부 · 반대", `${d.verdicts.찬성} · ${d.verdicts.조건부} · ${d.verdicts.반대}`],
