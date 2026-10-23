@@ -103,6 +103,16 @@ export function sessionRoots(input) {
   return [...new Set(roots.filter(Boolean))];
 }
 
+// .cony/team.json. 없거나 깨졌으면 기본값(전원 build, 결정 team, 머지 auto)
+export function readTeamConfig(root) {
+  const defaults = { pm: "build", fe: "build", be: "build", qa: "build", decisions: "team", merge: "auto" };
+  try {
+    return { ...defaults, ...JSON.parse(readFileSync(join(root, ".cony", "team.json"), "utf8")) };
+  } catch {
+    return defaults;
+  }
+}
+
 export function readBoardStatus(root) {
   const path = join(root, ".cony", "board.md");
   if (!existsSync(path)) return null;

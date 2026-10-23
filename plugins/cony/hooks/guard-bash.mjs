@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
-import { expandHome, findConyRoot, logEvent, output, readInput, rememberRoot, truncate } from "./lib.mjs";
+import { expandHome, findConyRoot, logEvent, output, readInput, readTeamConfig, rememberRoot, truncate } from "./lib.mjs";
 
 const PROTECTED_BRANCHES = new Set(["main", "master"]);
 
@@ -85,6 +85,15 @@ const ASK = [
 
 for (const [pattern, reason] of DENY) {
   if (pattern.test(normalized)) decide("deny", reason);
+}
+
+// team.json 의 merge 설정: auto(팀이 머지) | pr(PR까지만, 머지는 사람) | none(커밋까지만, push·PR도 사람)
+const { merge } = readTeamConfig(findConyRoot(cwd));
+if (merge === "none" && /\bgit\s+push\b|\bgh\s+pr\s+create\b/.test(normalized)) {
+  decide("deny", "team.json의 merge가 none이라 push와 PR 생성은 사용자가 합니다. 작업 브랜치에 커밋까지만 하고, 보고서에 커밋 목록을 적으세요.");
+}
+if (merge !== "auto" && /\bgh\s+pr\s+merge\b/.test(normalized)) {
+  decide("deny", `team.json의 merge가 ${merge}라 머지는 사용자가 합니다. PR 링크와 CI 결과를 보고하고 멈추세요.`);
 }
 
 for (const match of normalized.matchAll(/\bgit\s+push\b([^;&|]*)/g)) {

@@ -172,6 +172,24 @@ describe("guard-bash: 위험 명령", () => {
     assert.equal(bash("gh pr merge 1 --squash", { env: { FAKE_GH_STATUS: "0" } }), "allow"));
   test("CI 진행 중이면 머지 차단", () =>
     assert.equal(bash("gh pr merge 1 --squash", { env: { FAKE_GH_STATUS: "8" } }), "deny"));
+  test("merge가 pr이면 CI가 통과해도 머지 차단, PR 생성은 허용", () => {
+    const prProject = createProject();
+    git(prProject, "switch", "-q", "-c", "cony/feature");
+    writeFileSync(join(prProject, ".cony", "team.json"), JSON.stringify({ merge: "pr" }));
+    assert.equal(bash("gh pr merge 1 --squash", { cwd: prProject, env: { FAKE_GH_STATUS: "0" } }), "deny");
+    assert.equal(bash("gh pr create --fill", { cwd: prProject }), "allow");
+    assert.equal(bash("git push -u origin HEAD", { cwd: prProject }), "allow");
+  });
+
+  test("merge가 none이면 push와 PR 생성도 차단, 커밋은 허용", () => {
+    const localProject = createProject();
+    git(localProject, "switch", "-q", "-c", "cony/feature");
+    writeFileSync(join(localProject, ".cony", "team.json"), JSON.stringify({ merge: "none" }));
+    assert.equal(bash("git push -u origin HEAD", { cwd: localProject }), "deny");
+    assert.equal(bash("gh pr create --fill", { cwd: localProject }), "deny");
+    assert.equal(bash("git commit -m 'feat: x'", { cwd: localProject }), "allow");
+  });
+
   test("CI 실패면 머지 차단", () =>
     assert.equal(bash("gh pr merge 1 --squash", { env: { FAKE_GH_STATUS: "1" } }), "deny"));
 });

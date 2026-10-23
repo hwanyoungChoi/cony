@@ -52,9 +52,10 @@ function readTeam() {
     return {
       ...Object.fromEntries(ROLES.map((role) => [role, ["build", "review", "off"].includes(team[role]) ? team[role] : "build"])),
       decisions: team.decisions === "user" ? "user" : "team",
+      merge: ["auto", "pr", "none"].includes(team.merge) ? team.merge : "auto",
     };
   } catch {
-    return { ...Object.fromEntries(ROLES.map((role) => [role, "build"])), decisions: "team" };
+    return { ...Object.fromEntries(ROLES.map((role) => [role, "build"])), decisions: "team", merge: "auto" };
   }
 }
 

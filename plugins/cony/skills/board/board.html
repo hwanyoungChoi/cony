@@ -466,13 +466,14 @@
     const MODE_LABEL = { build: "구현", review: "검토", off: "제외" };
     const team = document.getElementById("team");
     team.replaceChildren();
-    const { decisions = "team", ...roles } = data.team ?? {};
+    const { decisions = "team", merge = "auto", ...roles } = data.team ?? {};
     for (const [role, mode] of Object.entries(roles)) {
       const member = el("span", `member ${mode}`);
       member.append(el("span", `role ${role}`, role.toUpperCase()), el("span", "", MODE_LABEL[mode] ?? mode));
       team.append(member);
     }
     team.append(el("span", "member", decisions === "user" ? "· 결정: 사용자" : "· 결정: 팀"));
+    team.append(el("span", "member", `· 머지: ${{ auto: "자동", pr: "PR까지", none: "커밋까지" }[merge] ?? merge}`));
 
     renderDocList("reviews", data.reviews);
     renderDocList("handoffs", data.handoffs);
