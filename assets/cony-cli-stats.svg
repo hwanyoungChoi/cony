@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 968 634" width="968" height="634" role="img" aria-label="cony stats">
+<rect width="968" height="634" rx="12" fill="#1C1D22"/>
+<rect x="0.5" y="0.5" width="967" height="633" rx="12" fill="none" stroke="#33343B"/>
+<circle cx="22" cy="20" r="6" fill="#FF5F57"/><circle cx="42" cy="20" r="6" fill="#FEBC2E"/><circle cx="62" cy="20" r="6" fill="#28C840"/>
+<text x="484" y="24" fill="#8B8B94" font-size="12" text-anchor="middle" font-family="-apple-system, 'Segoe UI', sans-serif">cony stats</text>
+<g font-family="'SF Mono', Menlo, Consolas, 'D2Coding', 'Apple SD Gothic Neo', monospace" font-size="14" xml:space="preserve">
+<text x="22.2 39.0 64.0 80.8 89.2 97.6 106.0 114.4 122.8 131.2 139.6 148.0 156.4 164.8 173.2 181.6 190.0 198.4" y="52" fill="#E4E4E7" font-weight="700">지표·loan-calculator</text>
+<text x="223.6 232.0 240.4 248.8 257.2 265.6 274.0 282.4 290.8 299.2 307.8 324.6" y="52" fill="#E4E4E7" opacity="0.5">2026-10-21부터</text>
+<text x="22.2 39.0 64.2 81.0" y="92" fill="#E4E4E7" opacity="0.5">출력토큰</text>
+<text x="106.0 114.4 122.8 131.2" y="92" fill="#E4E4E7" font-weight="700">535k</text>
+<text x="156.4 181.8 198.6" y="92" fill="#E4E4E7" opacity="0.5">│합계</text>
+<text x="223.6 232.0 240.4 248.8 257.2 265.6" y="92" fill="#E4E4E7" font-weight="700">522.8M</text>
+<text x="290.8 316.2 333.0 349.8 366.6 391.8 408.6" y="92" fill="#E4E4E7" opacity="0.5">│에이전트실행</text>
+<text x="433.6 442.0" y="92" fill="#E4E4E7" font-weight="700">48</text>
+<text x="467.2 492.6 509.4" y="92" fill="#E4E4E7" opacity="0.5">│완료</text>
+<text x="534.4" y="92" fill="#E4E4E7" font-weight="700">1</text>
+<text x="559.6 585.0 601.8 618.6" y="92" fill="#E4E4E7" opacity="0.5">│되돌림</text>
+<text x="643.6" y="92" fill="#E4E4E7" font-weight="700">0</text>
+<text x="668.8 694.2 711.0 736.2 753.0 769.8" y="92" fill="#E4E4E7" opacity="0.5">│규칙건너뜀</text>
+<text x="794.8" y="92" fill="#E4E4E7" font-weight="700">0</text>
+<text x="820.0 845.2 853.6 862.0 870.4 887.4 904.2" y="92" fill="#E4E4E7" opacity="0.5">│hook차단</text>
+<text x="929.2 937.6" y="92" fill="#E4E4E7" font-weight="700">23</text>
+<text x="22.2 39.0 55.8 81.0 97.8" y="132" fill="#E4E4E7" font-weight="700">역할별토큰</text>
+<text x="131.2 139.8 156.6 173.4 198.6 215.4 240.6 257.4 282.6 299.4 316.0" y="132" fill="#E4E4E7" opacity="0.5">(합계는캐시읽기포함)</text>
+<text x="22.2 39.0" y="152" fill="#E4E4E7" opacity="0.5">리드</text>
+<text x="80.8 89.2 97.6 106.0 114.4 122.8 131.2 139.6 148.0 156.4 164.8 173.2 181.6 190.0 198.4 206.8 215.2 223.6 232.0 240.4 248.8 257.2 265.6 274.0 282.4 290.8 299.2 307.6 316.0 324.4 332.8 341.2 349.6 358.0 366.4 374.8 383.2 391.6 400.0 408.4 416.8 425.2 433.6 442.0 450.4 458.8 467.2 475.6 484.0 492.4 500.8 509.2 517.6 526.0 534.4 542.8" y="152" fill="#4c6ef5">▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇▇</text>
+<text x="559.6 568.0 576.4 584.8 593.2 601.6" y="152" fill="#E4E4E7" font-weight="700">408.7M</text>
+<text x="618.6 635.4 660.4 668.8 677.2 685.6 702.4 719.2 727.8" y="152" fill="#E4E4E7" opacity="0.5">출력500k·1회</text>
+<rect x="22.0" y="157" width="9.0" height="20" fill="#7c3aed"/>
+<rect x="30.4" y="157" width="9.0" height="20" fill="#7c3aed"/>
+<rect x="38.8" y="157" width="9.0" height="20" fill="#7c3aed"/>
+<rect x="47.2" y="157" width="9.0" height="20" fill="#7c3aed"/>
+<text x="30.4 38.8" y="172" fill="#FFFFFF" font-weight="700">PM</text>
+<text x="80.8 89.2" y="172" fill="#4c6ef5">▇▇</text>
+<text x="106.0 114.4 122.8 131.2 139.6" y="172" fill="#E4E4E7" font-weight="700">15.6M</text>
+<text x="156.6 173.4 198.4 206.8 223.6 240.4 248.8 257.4" y="172" fill="#E4E4E7" opacity="0.5">출력2k·10회</text>
+<rect x="22.0" y="177" width="9.0" height="20" fill="#3b5bdb"/>
+<rect x="30.4" y="177" width="9.0" height="20" fill="#3b5bdb"/>
+<rect x="38.8" y="177" width="9.0" height="20" fill="#3b5bdb"/>
+<rect x="47.2" y="177" width="9.0" height="20" fill="#3b5bdb"/>
+<text x="30.4 38.8" y="192" fill="#FFFFFF" font-weight="700">FE</text>
+<text x="80.8 89.2 97.6 106.0 114.4 122.8 131.2 139.6 148.0" y="192" fill="#4c6ef5">▇▇▇▇▇▇▇▇▇</text>
+<text x="164.8 173.2 181.6 190.0 198.4" y="192" fill="#E4E4E7" font-weight="700">68.8M</text>
+<text x="215.4 232.2 257.2 265.6 274.0 290.8 307.6 316.0 324.6" y="192" fill="#E4E4E7" opacity="0.5">출력24k·22회</text>
+<rect x="22.0" y="197" width="9.0" height="20" fill="#2f9e44"/>
+<rect x="30.4" y="197" width="9.0" height="20" fill="#2f9e44"/>
+<rect x="38.8" y="197" width="9.0" height="20" fill="#2f9e44"/>
+<rect x="47.2" y="197" width="9.0" height="20" fill="#2f9e44"/>
+<text x="30.4 38.8" y="212" fill="#FFFFFF" font-weight="700">BE</text>
+<text x="80.8 89.2" y="212" fill="#4c6ef5">▇▇</text>
+<text x="106.0 114.4 122.8 131.2 139.6" y="212" fill="#E4E4E7" font-weight="700">16.9M</text>
+<text x="156.6 173.4 198.4 206.8 223.6 240.4 249.0" y="212" fill="#E4E4E7" opacity="0.5">출력5k·5회</text>
+<rect x="22.0" y="217" width="9.0" height="20" fill="#f08c00"/>
+<rect x="30.4" y="217" width="9.0" height="20" fill="#f08c00"/>
+<rect x="38.8" y="217" width="9.0" height="20" fill="#f08c00"/>
+<rect x="47.2" y="217" width="9.0" height="20" fill="#f08c00"/>
+<text x="30.4 38.8" y="232" fill="#FFFFFF" font-weight="700">QA</text>
+<text x="80.8 89.2" y="232" fill="#4c6ef5">▇▇</text>
+<text x="106.0 114.4 122.8 131.2 139.6" y="232" fill="#E4E4E7" font-weight="700">12.1M</text>
+<text x="156.6 173.4 198.4 206.8 223.6 240.4 248.8 257.4" y="232" fill="#E4E4E7" opacity="0.5">출력2k·10회</text>
+<text x="22.2 39.0" y="252" fill="#E4E4E7" opacity="0.5">기타</text>
+<text x="80.8" y="252" fill="#4c6ef5">▇</text>
+<text x="97.6 106.0 114.4 122.8" y="252" fill="#E4E4E7" font-weight="700">683k</text>
+<text x="139.8 156.6 181.6 190.0 198.4 215.2 232.0 240.6" y="252" fill="#E4E4E7" opacity="0.5">출력212·1회</text>
+<text x="22.2 39.0" y="292" fill="#E4E4E7" font-weight="700">토론</text>
+<text x="39.0 55.8 72.4 80.8 89.2 97.6 106.0" y="312" fill="#E4E4E7" opacity="0.5">결정(ADR)</text>
+<text x="299.2 307.6" y="312" fill="#E4E4E7" font-weight="700">23</text>
+<text x="39.0 55.8 72.4 81.0 97.8 114.6 131.4 156.6 173.4 190.2 215.4 232.2" y="332" fill="#E4E4E7" opacity="0.5">반대·조건부가있었던결정</text>
+<text x="299.2 307.6 324.4 332.8 341.2 349.6 358.0" y="332" fill="#E4E4E7" font-weight="700">13(57%)</text>
+<text x="39.0 55.8 72.6 89.4 114.6 131.4 156.4 173.4 190.2 215.2 232.2 249.0 265.8" y="352" fill="#E4E4E7" opacity="0.5">사용자가확정·대기·뒤집음</text>
+<text x="299.2 316.0 332.8 349.6 366.4" y="352" fill="#E4E4E7" font-weight="700">0·0·1</text>
+<text x="39.0 55.8 81.0 97.8 123.0 139.8 164.8 181.8 198.6 215.4 240.4 257.4 274.2" y="372" fill="#E4E4E7" opacity="0.5">검토판정찬성·조건부·반대</text>
+<text x="299.2 316.0 332.8 341.2 358.0 374.8" y="372" fill="#E4E4E7" font-weight="700">0·11·0</text>
+<text x="39.0 55.8 72.6 89.4 114.6 131.4 156.6 173.4" y="392" fill="#E4E4E7" opacity="0.5">사람에게넘긴문서</text>
+<text x="299.2" y="392" fill="#E4E4E7" font-weight="700">0</text>
+<text x="22.2 39.0 64.2 81.0" y="432" fill="#E4E4E7" font-weight="700">사람개입</text>
+<text x="106.0 114.4 122.8 131.2 139.6 148.0 156.4 164.8" y="432" fill="#E4E4E7" opacity="0.5">(log.md)</text>
+<text x="39.0 55.8" y="452" fill="#E4E4E7" opacity="0.5">요청</text>
+<text x="80.8 89.2" y="452" fill="#E4E4E7" font-weight="700">57</text>
+<text x="123.0 139.8" y="452" fill="#E4E4E7" opacity="0.5">토론</text>
+<text x="164.8" y="452" fill="#E4E4E7" font-weight="700">5</text>
+<text x="198.4 206.8" y="452" fill="#E4E4E7" opacity="0.5">AI</text>
+<text x="223.6 232.0" y="452" fill="#E4E4E7" font-weight="700">93</text>
+<text x="265.8 282.6 299.4" y="452" fill="#E4E4E7" opacity="0.5">되돌림</text>
+<text x="324.4" y="452" fill="#E4E4E7" font-weight="700">5</text>
+<text x="358.2 375.0" y="452" fill="#E4E4E7" opacity="0.5">놓침</text>
+<text x="400.0" y="452" fill="#E4E4E7" font-weight="700">8</text>
+<text x="22.0 30.4 38.8 47.2 55.8 81.0 97.8 123.0 139.8" y="492" fill="#E4E4E7" font-weight="700">hook이막은횟수</text>
+<text x="38.8 47.2 55.6 64.0 72.4 80.8 89.2 97.6 106.0 114.4 122.8 131.2 139.6" y="512" fill="#E4E4E7" opacity="0.5">board-on-stop</text>
+<text x="299.2 307.6 316.0 324.4 332.8" y="512" fill="#E4E4E7">block</text>
+<text x="349.6 358.0" y="512" fill="#E4E4E7" font-weight="700">16</text>
+<text x="38.8 47.2 55.6 64.0 72.4 80.8 89.2 97.6 106.0 114.4" y="532" fill="#E4E4E7" opacity="0.5">guard-bash</text>
+<text x="299.2 307.6 316.0" y="532" fill="#E4E4E7">ask</text>
+<text x="332.8" y="532" fill="#E4E4E7" font-weight="700">1</text>
+<text x="38.8 47.2 55.6 64.0 72.4 80.8 89.2 97.6 106.0 114.4 122.8 131.2 139.6" y="552" fill="#E4E4E7" opacity="0.5">guard-secrets</text>
+<text x="299.2 307.6 316.0 324.4" y="552" fill="#E4E4E7">deny</text>
+<text x="341.2" y="552" fill="#E4E4E7" font-weight="700">1</text>
+<text x="38.8 47.2 55.6 64.0 72.4 80.8 89.2 97.6 106.0 114.4 122.8 131.2" y="572" fill="#E4E4E7" opacity="0.5">lint-on-edit</text>
+<text x="299.2 307.6 316.0 324.4 332.8" y="572" fill="#E4E4E7">block</text>
+<text x="349.6" y="572" fill="#E4E4E7" font-weight="700">1</text>
+<text x="38.8 47.2 55.6 64.0 72.4 80.8 89.2 97.6 106.0 114.4 122.8 131.2 139.6 148.0" y="592" fill="#E4E4E7" opacity="0.5">verify-on-stop</text>
+<text x="299.2 307.6 316.0 324.4 332.8" y="592" fill="#E4E4E7">block</text>
+<text x="349.6" y="592" fill="#E4E4E7" font-weight="700">3</text>
+<text x="374.8 383.2 391.6 400.0 408.4 416.8 425.2 433.6 442.0 450.4 458.8 467.2 475.6 484.0 492.4" y="592" fill="#E4E4E7">allow-after-max</text>
+<text x="509.2" y="592" fill="#E4E4E7" font-weight="700">1</text>
+</g></svg>

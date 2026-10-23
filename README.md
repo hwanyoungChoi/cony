@@ -62,7 +62,14 @@ cony stats          # 역할별 토큰, 흐름, 토론, 사람 개입, hook 차�
 cony watch          # 보드를 띄워 두고 바뀌면 다시 그림 (cony watch stats 도 됨)
 ```
 
-터미널 폭이 좁으면 칸반을 세로 목록으로 바꿔 보여준다. 색은 `NO_COLOR=1`로 끌 수 있다.
+<p align="center">
+  <img src="assets/cony-cli-board.svg" alt="cony board: 터미널 칸반 보드" width="100%">
+</p>
+<p align="center">
+  <img src="assets/cony-cli-stats.svg" alt="cony stats: 터미널 지표" width="100%">
+</p>
+
+실제 프로젝트(모기지핏)를 진행하는 중에 찍은 화면이다. 터미널 폭이 좁으면 칸반을 세로 목록으로 바꿔 보여준다. 색은 `NO_COLOR=1`로 끌 수 있다.
 
 ### 브라우저에서 보기
 
