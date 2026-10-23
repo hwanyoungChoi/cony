@@ -121,8 +121,10 @@ function verifyRoot(root) {
     return null;
   }
 
-  const attempts = (state.attempts?.[signature] ?? 0) + 1;
-  writeFileSync(statePath, JSON.stringify({ passed: state.passed, attempts: { [signature]: attempts } }));
+  // 연속 실패는 세션 기준으로 센다. 고치는 동안이나 다른 세션 때문에 파일이 바뀌어도 횟수가 초기화되지 않게 한다.
+  const key = input.session_id ?? "unknown";
+  const attempts = (state.attempts?.[key] ?? 0) + 1;
+  writeFileSync(statePath, JSON.stringify({ passed: state.passed, attempts: { ...state.attempts, [key]: attempts } }));
   return { root, attempts, failures };
 }
 

@@ -230,6 +230,17 @@ describe("verify-on-stop: 종료 전 lint + typecheck", () => {
     assert.equal(decisionOf(runHook("verify-on-stop.mjs", { cwd: project })), "message");
   });
 
+  test("실패 내용이 바뀌어도 연속 실패 횟수는 세션 기준으로 이어진다", () => {
+    const project = createProject();
+    const file = join(project, "src", "broken.ts");
+    for (let i = 0; i < 3; i += 1) {
+      writeFileSync(file, `// TYPE_ERROR ${i}\n`);
+      assert.equal(decisionOf(runHook("verify-on-stop.mjs", { cwd: project, session_id: "s-reset" })), "block");
+    }
+    writeFileSync(file, "// TYPE_ERROR changed again\n");
+    assert.equal(decisionOf(runHook("verify-on-stop.mjs", { cwd: project, session_id: "s-reset" })), "message");
+  });
+
   test("고치면 통과하고, 같은 내용은 다시 검사하지 않음", () => {
     const project = createProject();
     writeFileSync(join(project, "src", "broken.ts"), "// LINT_ERROR\n");
