@@ -240,6 +240,14 @@ describe("verify-on-stop: 종료 전 lint + typecheck", () => {
     assert.ok(state.passed);
   });
 
+  test("명령만 실행한 프로젝트는 검사하지 않는다 (다른 세션이 작업 중인 코드)", () => {
+    const project = createProject();
+    const outside = createProject({ cony: false });
+    writeFileSync(join(project, "src", "wip.ts"), "// TYPE_ERROR\n");
+    runHook("guard-bash.mjs", { session_id: "reader", cwd: outside, tool_input: { command: `cd ${project} && node cli.mjs board` } });
+    assert.equal(decisionOf(runHook("verify-on-stop.mjs", { cwd: outside, session_id: "reader" })), "allow");
+  });
+
   test("세션 폴더가 달라도 이 세션이 수정한 프로젝트를 검사", () => {
     const project = createProject();
     const outside = createProject({ cony: false });
