@@ -306,8 +306,9 @@
     const [, box, number, rawTitle, tag, tagOwner, legacyOwner] = m;
     const legacy = !tag && / ← /.test(line);
     const col = box.trim() ? "done" : tag ? tag.toLowerCase() : legacy ? "progress" : "todo";
-    const ac = (rawTitle.match(/\((AC-[^)]+)\)/) || [])[1] || "";
-    const title = rawTitle.replace(/\s*\(AC-[^)]+\)/, "").trim();
+    const acMatch = rawTitle.match(/\s*\((AC-[^)]+)\)/) || rawTitle.match(/\s+[—–-]\s+(AC-.+)$/);
+    const ac = acMatch?.[1] || "";
+    const title = (acMatch ? rawTitle.replace(acMatch[0], "") : rawTitle).trim();
     return { col, key: `#${number}`, title, ac, owner: tagOwner || legacyOwner || "" };
   }
 

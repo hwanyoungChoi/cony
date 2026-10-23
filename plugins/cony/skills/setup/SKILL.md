@@ -190,7 +190,15 @@ jobs:
 - `.gitignore`에 `.cony/.cache/`와 `.eslintcache`(lint-staged의 `--cache`가 만드는 파일)를 추가한다.
 - `.cony/`의 나머지(스펙, 결정 기록, 작업 기록, 보고서)를 커밋에 포함할지 사용자에게 묻는다. 결정 기록이 남으면 나중에 "왜 이렇게 했지"를 추적할 수 있어서 포함을 추천한다.
 
-## 9. 마무리
+## 9. 터미널 명령 안내
+
+사용자의 셸 설정에 `cony` 함수가 없으면(`type cony`로 확인) 아래 한 줄을 안내한다. 셸 설정 파일은 사용자가 직접 고치게 하고, 원하면 대신 추가한다.
+
+```bash
+cony() { node "$(ls -d ~/.claude/plugins/cache/conychoi-plugins/cony/*/ | sort -V | tail -1)skills/board/cli.mjs" "$@"; }
+```
+
+## 10. 마무리
 
 - 검증 명령을 한 번 돌려 통과를 확인한다.
 - 커밋 단위를 제안한다: lint/format 설정, husky, CI, CLAUDE.md + CONVENTIONS.md, 권한 설정 + .cony는 각각 다른 커밋. 커밋은 사용자가 요청할 때만 한다.

@@ -48,6 +48,24 @@ claude plugin update cony@conychoi-plugins
 /cony:board                       # 진행 상황을 브라우저 대시보드로 (실시간 갱신)
 ```
 
+### 터미널에서 보기
+
+보드와 지표는 터미널에서도 본다. 셸 설정(`~/.zshrc` 등)에 아래 함수를 한 번 넣어 두면, cony 프로젝트 폴더 어디서든 쓸 수 있다. 플러그인이 업데이트돼도 항상 최신 버전을 가리킨다.
+
+```bash
+cony() { node "$(ls -d ~/.claude/plugins/cache/conychoi-plugins/cony/*/ | sort -V | tail -1)skills/board/cli.mjs" "$@"; }
+```
+
+```
+cony board          # 칸반, 확인 필요·막힌 것, 최근 결정 (--all: 백로그까지)
+cony stats          # 역할별 토큰, 흐름, 토론, 사람 개입, hook 차단
+cony watch          # 보드를 띄워 두고 바뀌면 다시 그림 (cony watch stats 도 됨)
+```
+
+터미널 폭이 좁으면 칸반을 세로 목록으로 바꿔 보여준다. 색은 `NO_COLOR=1`로 끌 수 있다.
+
+### 브라우저에서 보기
+
 `/cony:board`는 `.cony/`를 감시하는 로컬 서버(`localhost:4747`)를 띄운다. **보드** 탭과 **지표** 탭이 있다. 태스크는 **BACKLOG · TODO · PROGRESS · REVIEW · DONE** 칸반으로 보이고, 리드가 보드를 갱신하는 즉시 카드가 옮겨간다. 확인 필요·막힌 것 배너, 결정 기록, 검토 기록(최신 라운드부터 `PM` `FE` `BE` `QA` 배지와 판정)도 함께 보인다. 이 컴퓨터에서만 열리므로 폰에서는 아래 Remote Control을 쓴다.
 
 **지표** 탭은 cony가 값어치를 하는지 숫자로 보여준다. 역할별 토큰(Claude Code 대화 기록에서 자동 집계), 완료 태스크와 소요 시간, qa 되돌림, 흐름 규칙 건너뜀, 반대·조건부 의견이 있었던 결정 비율, 사용자가 뒤집은 결정, 사람 개입 횟수, hook이 막은 횟수. 비슷한 크기의 기능을 cony 팀과 일반 세션으로 각각 만들어 이 숫자를 비교하면 팀 구조의 효과를 판단할 수 있다.
@@ -170,5 +188,5 @@ Remote Control은 세션을 돌리는 컴퓨터가 켜져 있어야 한다. 잠�
 hook이나 보드 스크립트를 고친 뒤에는 테스트를 돌린다. 실제 ESLint·tsc·gh 대신 가짜 실행 파일을 써서 의존성 없이 몇 초 만에 끝난다. push하면 GitHub Actions에서도 돈다.
 
 ```bash
-node --test tests/hooks.test.mjs tests/board.test.mjs tests/stats.test.mjs
+node --test tests/hooks.test.mjs tests/board.test.mjs tests/stats.test.mjs tests/cli.test.mjs
 ```
