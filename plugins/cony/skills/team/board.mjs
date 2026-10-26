@@ -18,12 +18,38 @@
 //   review → done 은 qa 기록(team.json 의 qa 설정에 따라)과 커밋되지 않은 변경 없음을 확인한다.
 //   --skip-reason "이유" 로 넘어갈 수 있지만 log.md 에 `놓침`으로, 지표에 gate_bypassed 로 남는다.
 
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
 import { findConyRoot, logEvent } from "../../hooks/lib.mjs";
+
+// 오래 켜 둔 리드 세션은 스킬을 처음 불러온 버전의 경로로 계속 이 파일을 부른다.
+// 플러그인 캐시에서 실행됐고 더 새 버전이 설치돼 있으면 그쪽에 넘긴다(단계 검사가 최신 규칙을 따르도록).
+const newer = newerInstall(fileURLToPath(import.meta.url));
+if (newer) {
+  const r = spawnSync(process.execPath, [newer, ...process.argv.slice(2)], { stdio: "inherit" });
+  process.exit(r.status ?? 1);
+}
+
+function newerInstall(self) {
+  const m = self.match(/^(.*[\\/]plugins[\\/]cache[\\/][^\\/]+[\\/]cony)[\\/]([^\\/]+)[\\/](skills[\\/]team[\\/]board\.mjs)$/);
+  if (!m) return null;
+  const [, base, current, rel] = m;
+  const parse = (v) => v.split(".").map(Number);
+  const compare = (a, b) => {
+    const [x, y] = [parse(a), parse(b)];
+    for (let i = 0; i < Math.max(x.length, y.length); i += 1) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) - (y[i] ?? 0);
+    return 0;
+  };
+  const latest = readdirSync(base)
+    .filter((v) => /^\d+(\.\d+)*$/.test(v) && existsSync(join(base, v, rel)))
+    .sort(compare)
+    .at(-1);
+  return latest && compare(latest, current) > 0 ? join(base, latest, rel) : null;
+}
 
 const SECTIONS = ["태스크", "백로그", "지금 하는 일", "최근 결정", "사용자 확인 필요", "막힌 것", "PR"];
 const STATUSES = ["진행 중", "사용자 대기", "완료", "중단됨"];

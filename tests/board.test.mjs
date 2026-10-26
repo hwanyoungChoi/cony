@@ -268,3 +268,18 @@ describe("board.mjs", () => {
     assert.match(r.stderr, /--init/);
   });
 });
+
+test("플러그인 캐시의 예전 버전으로 불리면 설치된 최신 버전에 넘긴다", () => {
+  const cony = join(base, "plugins", "cache", "conychoi-plugins", "cony");
+  for (const v of ["0.9.0", "0.10.0"]) {
+    mkdirSync(join(cony, v, "skills", "team"), { recursive: true });
+    mkdirSync(join(cony, v, "hooks"), { recursive: true });
+    writeFileSync(join(cony, v, "hooks", "lib.mjs"), readFileSync(new URL("../plugins/cony/hooks/lib.mjs", import.meta.url)));
+  }
+  writeFileSync(join(cony, "0.9.0", "skills", "team", "board.mjs"), readFileSync(SCRIPT));
+  writeFileSync(join(cony, "0.10.0", "skills", "team", "board.mjs"), 'console.log("latest", process.argv.slice(2).join(" "));\nprocess.exit(3);\n');
+
+  const r = spawnSync("node", [join(cony, "0.9.0", "skills", "team", "board.mjs"), "--status", "완료"], { encoding: "utf8" });
+  assert.equal(r.status, 3);
+  assert.equal(r.stdout.trim(), "latest --status 완료", "0.9.0 < 0.10.0 은 숫자로 비교한다");
+});
