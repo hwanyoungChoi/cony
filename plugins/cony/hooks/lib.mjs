@@ -82,6 +82,14 @@ export function rememberRoot(sessionId, root, kind = "edited") {
   writeFileSync(file, JSON.stringify([...roots, root]));
 }
 
+// 목록에 더하지 않고 값 하나로 덮어쓴다 (예: 마지막으로 막은 시각)
+export function rememberValue(sessionId, kind, value) {
+  if (!sessionId) return;
+  const file = sessionFile(sessionId, kind);
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, JSON.stringify([value]));
+}
+
 export function rememberedRoots(sessionId, kind = "edited") {
   if (!sessionId) return [];
   try {
@@ -97,7 +105,7 @@ export function leadRoots(sessionId) {
 
 export function forgetSession(sessionId) {
   if (!sessionId) return;
-  for (const kind of ["edited", "lead", "touched"]) rmSync(sessionFile(sessionId, kind), { force: true });
+  for (const kind of ["edited", "lead", "board-stop-at", "touched"]) rmSync(sessionFile(sessionId, kind), { force: true });
 }
 
 export function sessionRoots(input) {

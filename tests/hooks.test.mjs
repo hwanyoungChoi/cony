@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, describe, test } from "node:test";
@@ -280,11 +280,17 @@ describe("board-on-stop / board-on-end: 보드 상태", () => {
       tool_input: { command: 'node "/plugin/skills/team/board.mjs" --task 1=doing' },
     });
   const boardText = (project) => readFileSync(join(project, ".cony", "board.md"), "utf8");
+  // 보드를 minutes 분 전에 마지막으로 고친 것처럼 만든다
+  const ageBoard = (project, minutes) => {
+    const t = new Date(Date.now() - minutes * 60_000);
+    utimesSync(join(project, ".cony", "board.md"), t, t);
+  };
 
-  test("리드가 진행 중인 채로 턴을 끝내면 한 번 막음", () => {
+  test("리드가 진행 중인 채로 15분 넘게 보드를 안 고치고 턴을 끝내면 막음", () => {
     const project = createProject();
     writeBoard(project, "진행 중");
     becomeLead(project, "lead-1");
+    ageBoard(project, 20);
     assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "lead-1" })), "block");
     assert.equal(
       decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "lead-1", stop_hook_active: true })),
@@ -299,7 +305,25 @@ describe("board-on-stop / board-on-end: 보드 상태", () => {
       session_id: "lead-edit",
       tool_input: { file_path: join(project, ".cony", "board.md") },
     });
+    ageBoard(project, 20);
     assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "lead-edit" })), "block");
+  });
+
+  test("보드를 최근 15분 안에 고쳤으면 막지 않음", () => {
+    const project = createProject();
+    writeBoard(project, "진행 중");
+    becomeLead(project, "lead-fresh");
+    ageBoard(project, 5);
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "lead-fresh" })), "allow");
+  });
+
+  test("한 번 막은 뒤 30분 동안은 다시 막지 않음", () => {
+    const project = createProject();
+    writeBoard(project, "진행 중");
+    becomeLead(project, "lead-cool");
+    ageBoard(project, 20);
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "lead-cool" })), "block");
+    assert.equal(decisionOf(runHook("board-on-stop.mjs", { cwd: project, session_id: "lead-cool" })), "allow");
   });
 
   test("보드를 갱신하지 않은 세션(/cony:status 등)은 막지 않음", () => {
