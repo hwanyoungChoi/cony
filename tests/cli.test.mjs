@@ -85,6 +85,7 @@ test("stats: 대화 기록이 없어도 지표를 그린다", () => {
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /대화 기록 없음/);
   assert.match(r.stdout, /hook이 막은 횟수/);
+  assert.match(r.stdout, /과정별 시간/);
 });
 
 test("cony 프로젝트 밖이면 알려주고 실패한다", () => {

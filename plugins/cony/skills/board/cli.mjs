@@ -210,6 +210,28 @@ function renderBoard(root, { all = false } = {}) {
 }
 
 // ── 지표 그리기 ────────────────────────────────────────────
+const minutes = (ms) => {
+  const m = Math.round(ms / 60000);
+  return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`;
+};
+
+function timeLines(time, barW) {
+  const out = [bold("과정별 시간") + dim("  (추정 · 동시에 돈 에이전트는 겹쳐 셈 · 사용자를 기다린 시간은 뺌)")];
+  const rows = Object.entries(time.phases).filter(([, p]) => p.ms > 0);
+  if (!rows.length) return [...out, dim("  아직 없음")];
+  const total = rows.reduce((a, [, p]) => a + p.ms, 0);
+  const max = Math.max(...rows.map(([, p]) => p.ms));
+  const isTest = (k) => k === "테스트" || k === "구현 중 테스트";
+  for (const [k, p] of rows) {
+    const n = Math.max(1, Math.round((p.ms / max) * Math.max(6, barW - 22)));
+    const avg = p.runs ? dim(` · ${p.runs}회 · 회당 ${minutes(p.ms / p.runs)}`) : "";
+    out.push(`  ${pad(dim(k), 16)} ${fg(isTest(k) ? "F08C00" : "4C6EF5")("▇".repeat(n))} ${bold(minutes(p.ms))} ${dim(`${Math.round((p.ms / total) * 100)}%`)}${avg}`);
+  }
+  const test = rows.filter(([k]) => isTest(k)).reduce((a, [, p]) => a + p.ms, 0);
+  out.push(`  ${dim("테스트 비중")} ${bold(`${Math.round((test / total) * 100)}%`)} ${dim("(qa 테스트 + fe·be가 테스트를 쓰고 돌린 시간)")}`);
+  return out;
+}
+
 function renderStats(root) {
   const s = computeStats(root);
   const w = termWidth();
@@ -217,18 +239,26 @@ function renderStats(root) {
   const hookTotal = Object.values(s.hooks).reduce((sum, d) => sum + Object.values(d).reduce((a, b) => a + b, 0), 0);
   const agentRuns = Object.entries(c.byRole).filter(([r]) => r !== "리드").reduce((a, [, b]) => a + b.runs, 0);
   const tile = (label, value) => `${dim(label)} ${bold(value)}`;
+  const tiles = [
+    tile("출력 토큰", fmt(c.total.output)),
+    tile("합계", fmt(c.total.total)),
+    tile("에이전트 실행", String(agentRuns)),
+    tile("완료", String(s.flow.done)),
+    tile("되돌림", String(s.flow.rollbacks)),
+    tile("규칙 건너뜀", String(s.flow.bypasses)),
+    tile("hook 차단", String(hookTotal)),
+  ];
+  // 폭을 넘으면 다음 줄로
+  const tileLines = [];
+  for (const t of tiles) {
+    const last = tileLines.at(-1);
+    if (last && width(last + dim("  │  ") + t) <= w) tileLines[tileLines.length - 1] = last + dim("  │  ") + t;
+    else tileLines.push(t);
+  }
   const out = [
     bold(`지표 · ${basename(root)}`) + dim(c.found ? `  ${c.since?.slice(0, 10) ?? "?"}부터` : "  (대화 기록 없음, 비용 지표 비어 있음)"),
     "",
-    [
-      tile("출력 토큰", fmt(c.total.output)),
-      tile("합계", fmt(c.total.total)),
-      tile("에이전트 실행", String(agentRuns)),
-      tile("완료", String(s.flow.done)),
-      tile("되돌림", String(s.flow.rollbacks)),
-      tile("규칙 건너뜀", String(s.flow.bypasses)),
-      tile("hook 차단", String(hookTotal)),
-    ].join(dim("  │  ")),
+    ...tileLines,
     "",
     bold("역할별 토큰") + dim("  (합계는 캐시 읽기 포함)"),
   ];
@@ -241,6 +271,7 @@ function renderStats(root) {
     const n = Math.max(1, Math.round((b.total / max) * barW));
     out.push(`${pad(label, 6)} ${fg("4C6EF5")("▇".repeat(n))} ${bold(fmt(b.total))} ${dim(`출력 ${fmt(b.output)} · ${b.runs}회`)}`);
   }
+  out.push("", ...timeLines(s.time, barW));
   const d = s.debate;
   const pct = d.adrs ? Math.round((d.adrsWithDissent / d.adrs) * 100) : 0;
   const kv = (rows) => rows.map(([k, v]) => `  ${pad(dim(k), 30)} ${bold(String(v))}`);
@@ -272,7 +303,7 @@ function renderStats(root) {
 const HELP = `cony — 터미널에서 보는 cony 보드와 지표
 
   cony board [--all]   칸반, 확인 필요·막힌 것, 최근 결정 (--all: 백로그 목록까지)
-  cony stats           역할별 토큰, 흐름, 토론, 사람 개입, hook 차단
+  cony stats           역할별 토큰, 과정별 시간, 흐름, 토론, 사람 개입, hook 차단
   cony watch [stats]   바뀔 때마다 다시 그린다 (Ctrl+C 로 끝)
 
 cony 프로젝트(.cony/ 가 있는 폴더) 안에서 실행한다.`;

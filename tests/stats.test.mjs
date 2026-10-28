@@ -74,3 +74,43 @@ test("이벤트·ADR·검토·log.md에서 흐름, 토론, 사람 개입, hook �
   assert.equal(s.debate.handoffs, 1);
   assert.deepEqual(s.people, { 요청: 2, 토론: 0, AI: 1, 되돌림: 0, 놓침: 1 });
 });
+
+test("과정별 시간: 머리표·역할로 과정을 가르고, 구현 중 테스트와 리드 조율 시간을 추정한다", () => {
+  const root = join(base, "proj-time");
+  mkdirSync(join(root, ".cony"), { recursive: true });
+  const dir = join(base, "transcripts", root.replace(/[^A-Za-z0-9]/g, "-"));
+  const sub = join(dir, "s1", "subagents");
+  mkdirSync(sub, { recursive: true });
+  const at = (hms) => `2026-10-22T${hms}Z`;
+  const user = (hms) => JSON.stringify({ type: "user", timestamp: at(hms), message: { content: [] } });
+  const tool = (hms, name, input) =>
+    JSON.stringify({ type: "assistant", timestamp: at(hms), message: { id: hms + name, content: [{ type: "tool_use", name, input }] } });
+  const agent = (name, meta, lines) => {
+    writeFileSync(join(sub, `${name}.jsonl`), lines.join("\n"));
+    writeFileSync(join(sub, `${name}.meta.json`), JSON.stringify(meta));
+  };
+
+  // 리드: 1분 일함, 29분 사용자 대기(뺌), 1분 중 30초는 fe가 돌던 구간(뺌)
+  writeFileSync(join(dir, "s1.jsonl"), [user("01:00:00"), user("01:01:00"), user("01:30:00"), user("01:31:00")].join("\n"));
+  // fe 구현 9.5분: 코드 4분, 테스트 파일 2분, 테스트 실행 3.5분
+  agent("agent-fe", { agentType: "cony:fe", description: "[구현] fe task 1" }, [
+    tool("01:30:30", "Edit", { file_path: "/p/src/a.ts" }),
+    user("01:34:30"),
+    tool("01:34:30", "Edit", { file_path: "/p/src/a.test.ts" }),
+    user("01:36:30"),
+    tool("01:36:30", "Bash", { command: "pnpm test" }),
+    user("01:40:00"),
+  ]);
+  agent("agent-qa", { agentType: "cony:qa", description: "qa reviews spec" }, [user("02:00:00"), user("02:03:00")]);
+  agent("agent-pm", { agentType: "cony:pm", description: "pm applies review fixes" }, [user("03:00:00"), user("03:02:00")]);
+
+  const { phases } = computeStats(root).time;
+  const min = (ms) => ms / 60000;
+  assert.equal(min(phases.구현.ms), 4);
+  assert.equal(min(phases["구현 중 테스트"].ms), 5.5);
+  assert.equal(phases.구현.runs, 1);
+  assert.equal(min(phases.검토.ms), 3, "머리표가 없으면 설명 낱말(review)로 검토를 가른다");
+  assert.equal(min(phases.스펙.ms), 2, "pm은 설명에 review가 있어도 스펙이다");
+  assert.equal(min(phases.조율.ms), 1.5);
+  assert.equal(phases.테스트.ms, 0);
+});

@@ -1,4 +1,4 @@
-// cony 지표: 비용(대화 기록), 흐름(이벤트), 토론(ADR·검토 원문), 사람 개입(log.md), hook 차단(이벤트)
+// cony 지표: 비용·과정별 시간(대화 기록), 흐름(이벤트), 토론(ADR·검토 원문), 사람 개입(log.md), hook 차단(이벤트)
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -101,6 +101,138 @@ function costStats(root) {
   return { byRole, byModel, total, since, found: true };
 }
 
+// ── 과정별 시간 (추정) ──
+// 에이전트 한 번의 실행 시간 = 대화 기록의 첫 시각 ~ 마지막 시각.
+// 검토인지 구현인지는 리드가 붙인 호출 설명으로 가른다. "[검토]" 같은 머리표가 있으면 그걸 따르고, 없으면 낱말로 짐작한다.
+const PHASE_TAGS = { 검토: "검토", 따라잡기: "검토", 구현: "구현", 테스트: "테스트", 스펙: "스펙" };
+const REVIEW_WORDS = /review|rebuttal|catch-?up|검토|리뷰|따라잡|제안/i;
+const TEST_FILE = /(\.(test|spec)\.[cm]?[jt]sx?$)|(^|\/)(__tests__|tests?|e2e)\//;
+const TEST_COMMAND = /\b(vitest|jest|playwright|mocha|(npm|pnpm|yarn|bun)( run)? test)\b/;
+// 리드 대화에서 이보다 긴 틈은 사용자를 기다린 시간으로 보고 뺀다.
+const LEAD_IDLE_MS = 2 * 60_000;
+// 에이전트 대화 안에서 이보다 긴 틈은 잘라서 센다(멈췄다 재개된 경우).
+const AGENT_GAP_CAP_MS = 10 * 60_000;
+
+function phaseOf(role, description = "") {
+  const tag = /^\s*\[([^\]]+)\]/.exec(description)?.[1];
+  if (tag && PHASE_TAGS[tag]) return PHASE_TAGS[tag];
+  if (role === "pm") return "스펙";
+  if (REVIEW_WORDS.test(description)) return "검토";
+  if (role === "qa") return "테스트";
+  if (role === "fe" || role === "be") return "구현";
+  return null;
+}
+
+const activityCache = new Map();
+
+// 대화 기록의 시각 목록과, 틈마다 테스트를 하던 중이었는지(마지막 도구 호출 기준)를 읽는다.
+function activityOf(path) {
+  const { mtimeMs, size } = statSync(path);
+  const key = `${path}:${mtimeMs}:${size}`;
+  const cached = activityCache.get(path);
+  if (cached?.key === key) return cached.value;
+  const points = [];
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    if (!line.includes('"timestamp"')) continue;
+    let d;
+    try {
+      d = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    if ((d.type !== "user" && d.type !== "assistant") || !d.timestamp) continue;
+    let testing = null;
+    if (d.type === "assistant" && Array.isArray(d.message?.content)) {
+      for (const c of d.message.content) {
+        if (c.type !== "tool_use") continue;
+        const file = c.input?.file_path ?? c.input?.notebook_path;
+        if (file) testing = TEST_FILE.test(file);
+        else if (c.name === "Bash") testing = TEST_COMMAND.test(c.input?.command ?? "");
+      }
+    }
+    points.push({ t: Date.parse(d.timestamp), testing });
+  }
+  points.sort((a, b) => a.t - b.t);
+  const value = points;
+  activityCache.set(path, { key, value });
+  return value;
+}
+
+function agentTime(points) {
+  let total = 0;
+  let test = 0;
+  let testing = false;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    if (points[i].testing !== null) testing = points[i].testing;
+    const gap = Math.min(points[i + 1].t - points[i].t, AGENT_GAP_CAP_MS);
+    total += gap;
+    if (testing) test += gap;
+  }
+  return { total, test, start: points[0]?.t ?? 0, end: points.at(-1)?.t ?? 0 };
+}
+
+// 겹치는 구간을 합친다
+function mergeIntervals(list) {
+  const sorted = list.filter(([a, b]) => b > a).sort((x, y) => x[0] - y[0]);
+  const out = [];
+  for (const [a, b] of sorted) {
+    if (out.length && a <= out.at(-1)[1]) out.at(-1)[1] = Math.max(out.at(-1)[1], b);
+    else out.push([a, b]);
+  }
+  return out;
+}
+
+function overlap([a, b], merged) {
+  let n = 0;
+  for (const [x, y] of merged) n += Math.max(0, Math.min(b, y) - Math.max(a, x));
+  return n;
+}
+
+function timeStats(root) {
+  const dir = transcriptsDir(root);
+  const phases = Object.fromEntries(["스펙", "검토", "구현", "구현 중 테스트", "테스트", "조율"].map((k) => [k, { runs: 0, ms: 0 }]));
+  if (!existsSync(dir)) return { phases, found: false };
+  const agentSpans = [];
+  const leadFiles = [];
+  for (const name of readdirSync(dir)) {
+    if (name.endsWith(".jsonl")) leadFiles.push(join(dir, name));
+    const subDir = join(dir, name, "subagents");
+    if (!existsSync(subDir)) continue;
+    for (const sub of readdirSync(subDir)) {
+      if (!sub.endsWith(".jsonl")) continue;
+      let meta = {};
+      try {
+        meta = JSON.parse(readFileSync(join(subDir, sub.replace(/\.jsonl$/, ".meta.json")), "utf8"));
+      } catch {
+        // meta 없음
+      }
+      const t = agentTime(activityOf(join(subDir, sub)));
+      agentSpans.push([t.start, t.end]);
+      const phase = phaseOf(roleOf(meta.agentType), meta.description);
+      if (!phase) continue;
+      phases[phase].runs += 1;
+      // fe·be가 구현하면서 테스트 파일을 고치거나 테스트를 돌린 시간은 따로 뺀다
+      if (phase === "구현") {
+        phases[phase].ms += t.total - t.test;
+        phases["구현 중 테스트"].ms += t.test;
+      } else {
+        phases[phase].ms += t.total;
+      }
+    }
+  }
+  // 리드: 짧은 틈만 일한 시간으로 보고, 에이전트가 돌던 구간은 뺀다
+  const busy = mergeIntervals(agentSpans);
+  for (const file of leadFiles) {
+    const points = activityOf(file);
+    for (let i = 0; i < points.length - 1; i += 1) {
+      const span = [points[i].t, points[i + 1].t];
+      if (span[1] - span[0] > LEAD_IDLE_MS) continue;
+      phases.조율.ms += span[1] - span[0] - overlap(span, busy);
+    }
+  }
+  return { phases, found: true };
+}
+
 function readEvents(conyDir) {
   const path = join(conyDir, "metrics", "events.jsonl");
   if (!existsSync(path)) return [];
@@ -191,6 +323,7 @@ export function computeStats(root) {
   const events = readEvents(conyDir);
   return {
     cost: costStats(root),
+    time: timeStats(root),
     flow: flowStats(events),
     hooks: hookStats(events),
     debate: debateStats(conyDir),

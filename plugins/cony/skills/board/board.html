@@ -134,6 +134,9 @@
   .bar-fill { height: 10px; border-radius: 0 4px 4px 0; background: var(--accent); min-width: 2px; }
   .bar-text { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .bar-text b { color: var(--text); }
+  .bars.phases .bar-row { grid-template-columns: 96px 1fr; }
+  .bars.phases .phase-label { font-size: 12px; color: var(--muted); }
+  .bar-fill.test { background: var(--warn); }
   .stats-hint { font-size: 11px; color: var(--muted); margin: 12px 0 0; }
   .kv { width: 100%; border-collapse: collapse; font-size: 13px; }
   .kv td { padding: 5px 0; border-bottom: 1px solid var(--border); }
@@ -243,6 +246,11 @@
         <h2 class="card-title">역할별 토큰</h2>
         <div id="cost-bars" class="bars"></div>
         <p class="stats-hint">합계에는 캐시 읽기가 포함된다. 역할 간 비교는 출력 토큰과 실행 횟수를 함께 본다.</p>
+      </section>
+      <section class="card stats-card">
+        <h2 class="card-title">과정별 시간 (추정)</h2>
+        <div id="time-bars" class="bars phases"></div>
+        <p class="stats-hint" id="time-hint">에이전트 실행 시간은 대화 기록의 첫 시각부터 마지막 시각까지. 동시에 돈 에이전트는 겹쳐 세고, 리드가 사용자를 기다린 시간은 뺀다.</p>
       </section>
       <section class="card stats-card">
         <h2 class="card-title">토론</h2>
@@ -569,6 +577,49 @@
     tooltip.style.top = `${event.clientY + 12}px`;
   }
 
+  const minutes = (ms) => {
+    const m = Math.round(ms / 60000);
+    return m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60}분` : `${m}분`;
+  };
+  const PHASE_HINT = {
+    스펙: "pm이 스펙을 쓰고 결정을 반영한 시간",
+    검토: "검토 모드로 불린 에이전트(스펙 검토, 따라잡기 등)",
+    구현: "fe·be 구현 실행에서 테스트 시간을 뺀 나머지",
+    "구현 중 테스트": "fe·be가 테스트 파일을 고치거나 테스트를 돌리던 시간",
+    테스트: "qa가 테스트를 쓰고 돌리고 판정한 시간",
+    조율: "에이전트가 돌지 않을 때 리드가 일한 시간",
+  };
+
+  function renderTime(time) {
+    const bars = document.getElementById("time-bars");
+    bars.replaceChildren();
+    const rows = Object.entries(time?.phases ?? {}).filter(([, p]) => p.ms > 0);
+    if (!rows.length) {
+      bars.append(el("p", "empty", "기록 없음"));
+      return;
+    }
+    const total = rows.reduce((a, [, p]) => a + p.ms, 0);
+    const max = Math.max(...rows.map(([, p]) => p.ms));
+    const isTest = (k) => k === "테스트" || k === "구현 중 테스트";
+    for (const [k, p] of rows) {
+      const row = el("div", "bar-row");
+      const track = el("div", "bar-track");
+      const fill = el("div", `bar-fill${isTest(k) ? " test" : ""}`);
+      fill.style.width = `${(p.ms / max) * 100}%`;
+      const text = el("div", "bar-text");
+      text.append(el("b", "", minutes(p.ms)), document.createTextNode(` · ${Math.round((p.ms / total) * 100)}%${p.runs ? ` · ${p.runs}회 · 회당 ${minutes(p.ms / p.runs)}` : ""}`));
+      track.append(fill, text);
+      row.append(el("span", "phase-label", k), track);
+      row.addEventListener("mousemove", (e) => showTip(e, [k, PHASE_HINT[k]]));
+      row.addEventListener("mouseleave", () => (tooltip.hidden = true));
+      bars.append(row);
+    }
+    const test = rows.filter(([k]) => isTest(k)).reduce((a, [, p]) => a + p.ms, 0);
+    const summary = el("p", "bar-text");
+    summary.append(document.createTextNode("테스트 비중 "), el("b", "", `${Math.round((test / total) * 100)}%`), document.createTextNode(" (qa 테스트 + 구현 중 테스트)"));
+    bars.append(summary);
+  }
+
   function renderStats(s) {
     const c = s.cost;
     const hookTotal = Object.values(s.hooks).reduce((sum, d) => sum + Object.values(d).reduce((a, b) => a + b, 0), 0);
@@ -613,6 +664,8 @@
       row.addEventListener("mouseleave", () => (tooltip.hidden = true));
       bars.append(row);
     }
+
+    renderTime(s.time);
 
     const d = s.debate;
     const pct = d.adrs ? Math.round((d.adrsWithDissent / d.adrs) * 100) : 0;
