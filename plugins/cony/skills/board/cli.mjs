@@ -42,6 +42,25 @@ function truncate(s, max) {
   }
   return `${out}…`;
 }
+// 색 코드가 섞인 문자열을 보이는 폭 기준으로 자른다
+function truncateStyled(s, max) {
+  if (width(s) <= max) return s;
+  let out = "";
+  let w = 0;
+  for (const part of s.split(/(\x1b\[[0-9;]*m)/)) {
+    if (/^\x1b\[/.test(part)) {
+      out += part;
+      continue;
+    }
+    for (const ch of part) {
+      const cw = WIDE.test(ch) ? 2 : 1;
+      if (w + cw > max - 1) return `${out}…${useColor ? "\x1b[0m" : ""}`;
+      out += ch;
+      w += cw;
+    }
+  }
+  return out;
+}
 const pad = (s, w) => s + " ".repeat(Math.max(0, w - width(s)));
 const termWidth = () => Math.max(40, Math.min(process.stdout.columns || Number(process.env.COLUMNS) || 100, 140));
 const fmt = (n) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n));
@@ -89,7 +108,11 @@ function readBoard(root) {
   const list = (name) => {
     const body = sections[name] ?? "";
     if (!body || /^(없음|아직 없음)$/.test(body)) return [];
-    return body.split("\n").filter((l) => /^\s*- /.test(l)).map((l) => l.replace(/^\s*- /, ""));
+    return body
+      .split("\n")
+      .filter((l) => /^\s*- /.test(l))
+      .map((l) => l.replace(/^\s*- /, ""))
+      .filter((item) => !/^(none|없음)$/i.test(item.trim()));
   };
   return {
     goal: (head.match(/^#\s+(.+)$/m) || [])[1] ?? "(목표 없음)",
@@ -162,7 +185,7 @@ function card(t, colW) {
   const [first, ...more] = wrap(t.title, colW - width(key), 2);
   const head = [`${dim(key)}${first ?? ""}`, ...more.map((l) => `${" ".repeat(width(key))}${l}`)];
   const meta = [t.owner && fg(ROLE_COLOR[t.owner] ?? "9A9AA6")(t.owner), t.ac && dim(t.ac)].filter(Boolean).join(dim(" · "));
-  return meta ? [...head, `${" ".repeat(width(key))}${meta}`] : head;
+  return meta ? [...head, `${" ".repeat(width(key))}${truncateStyled(meta, colW - width(key))}`] : head;
 }
 
 function kanban(board, w) {

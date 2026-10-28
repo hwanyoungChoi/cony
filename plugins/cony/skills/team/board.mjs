@@ -235,9 +235,11 @@ function decisionLine(rel) {
   return `- [${title}](${rel})${decided ? `: ${decided}` : ""}`;
 }
 
+// none 을 다른 항목과 같이 주면(--attention none --attention "질문") none 은 버린다
 function listOrNone(items) {
-  if (items.length === 1 && items[0] === "none") return "없음";
-  return items.map((item) => `- ${item}`).join("\n");
+  const real = items.filter((item) => !/^(none|없음)$/i.test(item.trim()));
+  if (!real.length) return "없음";
+  return real.map((item) => `- ${item}`).join("\n");
 }
 
 let board;

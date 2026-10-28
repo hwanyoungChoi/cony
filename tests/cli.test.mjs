@@ -15,7 +15,7 @@ const BOARD = `# 계산기 만들기
 
 ## 태스크
 - [x] 1. 최소 버전 (AC-1, 2)
-- [ ] 2. 연산자 교체 — AC-8 [PROGRESS · fe]
+- [ ] 2. 연산자 교체 — AC-8(f) 게이트(배포 기록 · 두 사람 탭 정리 확인 · 로컬 전용 계획 질문)를 충족하면 바로 머지 [PROGRESS · fe]
 - [ ] 3. 0 나누기 오류 [REVIEW · qa]
 - [ ] 4. 모바일 레이아웃
 
@@ -29,6 +29,7 @@ fe가 태스크 2 구현 중
 - [ADR-001 연산 순서](decisions/001.md): 우선순위 적용
 
 ## 사용자 확인 필요
+- none
 - 기본 LTV 확인
 
 ## 막힌 것
@@ -61,7 +62,13 @@ test("board: 칸반 4열, 확인 필요, 결정, 팀 설정을 그린다", () =>
   }
   assert.match(r.stdout, /#2 연산자 교체/);
   assert.match(r.stdout, /fe · AC-8/, "— AC-8 형식도 수용 기준으로 읽는다");
+  assert.doesNotMatch(r.stdout, /확인 필요  none/, "예전 보드에 남은 none 항목은 숨긴다");
   assert.doesNotMatch(r.stdout, /\x1b\[/, "NO_COLOR면 색 코드가 없다");
+  const wide = /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿＀-｠]/;
+  for (const line of r.stdout.split("\n")) {
+    const w = [...line].reduce((n, ch) => n + (wide.test(ch) ? 2 : 1), 0);
+    assert.ok(w <= 120, `카드 아랫줄이 칸을 넘지 않는다. 폭 ${w}: ${line}`);
+  }
 });
 
 test("board: 좁은 터미널에서는 세로 목록, 줄이 폭을 넘지 않는다", () => {

@@ -283,3 +283,12 @@ test("플러그인 캐시의 예전 버전으로 불리면 설치된 최신 버�
   assert.equal(r.status, 3);
   assert.equal(r.stdout.trim(), "latest --status 완료", "0.9.0 < 0.10.0 은 숫자로 비교한다");
 });
+
+test("--attention none 을 다른 항목과 같이 주면 none 은 빠진다", () => {
+  const dir = createProject();
+  board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
+  board(dir, "--attention", "none", "--attention", "기본 LTV 확인");
+  const text = readFileSync(join(dir, ".cony", "board.md"), "utf8");
+  assert.match(text, /## 사용자 확인 필요\n- 기본 LTV 확인\n/);
+  assert.doesNotMatch(text, /- none/);
+});
