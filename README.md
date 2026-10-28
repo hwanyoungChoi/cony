@@ -115,6 +115,9 @@ cony watch          # 띄워 두면 바뀔 때마다 다시 그린다 (cony watc
 | 테스트는 `[위험]` AC(데이터 손실·돈 계산·권한)에만 촘촘히, fe·be는 변이 실험 안 함 | pm, qa, fe, be | 한 기능 시간의 절반이 테스트로 가서 사람이 "테스트 줄여"라고 되돌렸다 |
 | qa도 판정 전에 lint·타입 검사 | qa | vitest는 통과했는데 타입 오류로 CI에서 깨졌다 |
 | 기능 하나에 리드 세션 하나 (+ hook) | 리드 | 리드 한 세션이 6일, 대화 92만 토큰으로 전체 토큰의 61%를 썼다 |
+| 에이전트 보고는 파일에 전문, 리드에게는 10줄 | 전원 | 리드 대화의 약 20%가 에이전트 보고·지시문이었다 |
+| 화면 확인은 qa가 (Playwright), 리드는 브라우저를 열지 않음 | qa, 리드 | 리드 대화의 약 18%가 리드가 직접 찍은 스크린샷이었다 |
+| push부터 머지까지 `ship.mjs` 한 번 | 리드 | 리드 대화의 약 28%가 git·gh 명령과 CI 출력이었다 |
 
 ## 프로젝트별 설정 (`.cony/team.json`)
 
@@ -162,12 +165,12 @@ hook이 강제한다.
 `merge`가 `auto`일 때의 흐름이다. `pr`이면 CI 확인까지, `none`이면 커밋까지 하고 멈춘다.
 
 1. `cony/{feature}` 브랜치에서 태스크마다 커밋하고 push한다.
-2. 끝나면 최종 보고서를 본문으로 PR을 만든다.
-3. CI가 실패하면 담당 에이전트가 최대 두 번 고친다.
-4. CI가 모두 통과하면 squash 머지한다. hook이 머지 직전에 CI 결과를 다시 확인한다.
+2. 끝나면 `ship.mjs` 한 번으로 push, PR(최종 보고서가 본문), CI 대기, squash 머지, 기본 브랜치 최신화까지 한다. 단계마다 한 줄만 출력해서 git·gh 출력이 리드 대화에 쌓이지 않는다.
+3. CI가 실패하면 실패한 검사를 담당 에이전트에게 넘기고, 에이전트가 로그를 읽고 최대 두 번 고친다.
+4. CI가 없거나 하나라도 실패하면 머지하지 않는다. 스크립트 안의 gh 호출은 hook이 보지 못하므로 `merge` 설정과 CI 확인을 스크립트가 직접 지킨다. 손으로 `gh pr merge`를 치면 hook이 CI 결과를 다시 확인한다.
 5. 머지 후에도 PR과 결정 기록이 남아서, 나중에 팀의 결정을 검토하고 뒤집을 수 있다.
 
-개인 계정 private 저장소는 무료 플랜에서 브랜치 보호를 쓸 수 없어서, "CI 통과 후 머지"를 hook으로 강제한다. CI 워크플로는 `/cony:setup`이 만든다.
+개인 계정 private 저장소는 무료 플랜에서 브랜치 보호를 쓸 수 없어서, "CI 통과 후 머지"를 hook과 `ship.mjs`로 강제한다. CI 워크플로는 `/cony:setup`이 만든다.
 
 ## 안전장치와 한계
 
@@ -213,7 +216,7 @@ hook은 `.cony/`가 있는 프로젝트에서만 동작하고, 다른 프로젝�
 | `team.json` | 프로젝트별 설정 |
 | `specs/` | 스펙과 태스크 |
 | `decisions/` | 결정 기록(ADR) |
-| `reviews/` | 검토 원문과 qa 검증 기록. 파일 이름이 `시각-역할-대상`이라 이름순이 곧 시간순이다 |
+| `reviews/` | 검토 원문, 구현 기록(`-fe-task-N`), qa 검증 기록. 에이전트는 전문을 여기 쓰고 리드에게는 10줄 이내로 보고한다. 파일 이름이 `시각-역할-대상`이라 이름순이 곧 시간순이다 |
 | `handoffs/` | 사람에게 넘길 문서 |
 | `log.md` | 작업 기록 (`요청` / `토론` / `AI` / `되돌림` / `놓침`) |
 | `reports/` | 최종 보고서 |
@@ -245,5 +248,5 @@ claude plugin update cony@conychoi-plugins
 hook이나 스크립트를 고친 뒤에는 테스트를 돌린다. 실제 ESLint·tsc·gh 대신 가짜 실행 파일을 써서 의존성 없이 몇 초 만에 끝난다. push하면 GitHub Actions에서도 돈다.
 
 ```bash
-node --test tests/hooks.test.mjs tests/board.test.mjs tests/stats.test.mjs tests/cli.test.mjs
+node --test tests/hooks.test.mjs tests/board.test.mjs tests/stats.test.mjs tests/cli.test.mjs tests/ship.test.mjs
 ```

@@ -285,12 +285,17 @@ function verdictOf(text) {
 }
 
 function debateStats(conyDir) {
-  const list = (folder) => {
+  const list = (folder, skip = /^$/) => {
     const dir = join(conyDir, folder);
-    return existsSync(dir) ? readdirSync(dir).filter((n) => n.endsWith(".md")).map((n) => readFileSync(join(dir, n), "utf8")) : [];
+    return existsSync(dir)
+      ? readdirSync(dir)
+          .filter((n) => n.endsWith(".md") && !skip.test(n))
+          .map((n) => readFileSync(join(dir, n), "utf8"))
+      : [];
   };
   const adrs = list("decisions");
-  const reviews = list("reviews");
+  // fe·be 구현 기록(-fe-task-N)은 판정이 없는 작업 기록이라 검토 판정에서 뺀다
+  const reviews = list("reviews", /-(fe|be)-task-/);
   const verdicts = { 찬성: 0, 조건부: 0, 반대: 0, 기타: 0 };
   for (const r of reviews) verdicts[verdictOf(r)] += 1;
   const dissent = adrs.filter((a) => /의견[^\n]*(반대|조건)/.test(a)).length;

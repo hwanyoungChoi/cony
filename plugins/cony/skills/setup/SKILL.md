@@ -103,6 +103,15 @@ Next.js면 `eslint-config-next`를 함께 spread한다. 빌드 산출물 디렉�
 - 테스트 러너가 없으면 무엇을 쓸지(Vite면 vitest, 그 외 jest 등) 사용자에게 묻는다.
 - 새 프로젝트는 테스트 파일이 없어서 그냥 `vitest run`이면 실패한다. `--passWithNoTests`를 붙인다(jest도 같은 옵션이 있다).
 
+## 4-1. 화면 확인 도구 (웹 프로젝트, 추천)
+
+qa가 화면을 확인할 수 있게 Playwright를 깐다. 없으면 리드가 브라우저를 직접 열게 되고, 스크린샷이 리드 대화에 쌓여 토큰을 많이 쓴다. 설치할지 사용자에게 묻는다.
+
+- `{pm} add -D @playwright/test` 뒤 `{pm} exec playwright install chromium`
+- `playwright.config.ts`: `testDir: "e2e"`, `testMatch: "**/*.e2e.ts"`(vitest의 `*.test`·`*.spec`과 겹치지 않게), `webServer`로 개발 서버를 띄운다.
+- scripts에 `"e2e": "playwright test"`. 느려서 CI와 pre-commit에는 넣지 않는다. 넣을지는 사용자가 정한다.
+- `.gitignore`에 `test-results/`, `playwright-report/`
+
 ## 5. husky + lint-staged
 
 커밋 전에 lint와 format이 자동으로 돌게 한다. 에이전트 기반 개발에서 리뷰 비용을 줄이는 장치다.

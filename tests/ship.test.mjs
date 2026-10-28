@@ -1,0 +1,162 @@
+import assert from "node:assert/strict";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { after, test } from "node:test";
+import { fileURLToPath } from "node:url";
+
+const SCRIPT = fileURLToPath(new URL("../plugins/cony/skills/team/ship.mjs", import.meta.url));
+const base = mkdtempSync(join(tmpdir(), "cony-ship-test-"));
+after(() => rmSync(base, { recursive: true, force: true }));
+
+// 가짜 gh: 호출을 기록하고, PR 상태를 파일에 둔다. CI 결과는 FAKE_CI(pass | fail | none)로 정한다.
+const fakeBin = join(base, "bin");
+mkdirSync(fakeBin);
+writeFileSync(
+  join(fakeBin, "gh"),
+  `#!/usr/bin/env node
+const fs = require("fs");
+const state = process.env.FAKE_GH_STATE;
+const args = process.argv.slice(2);
+fs.appendFileSync(state + ".log", args.join(" ") + "\\n");
+const pr = fs.existsSync(state) ? JSON.parse(fs.readFileSync(state, "utf8")) : null;
+const ci = process.env.FAKE_CI ?? "pass";
+const [a, b] = args;
+if (a === "repo") { console.log("main"); process.exit(0); }
+if (a === "pr" && b === "view" && args.includes("mergeCommit")) { console.log("abcdef1234567"); process.exit(0); }
+if (a === "pr" && b === "view") { if (!pr) process.exit(1); console.log(JSON.stringify(pr)); process.exit(0); }
+if (a === "pr" && b === "create") { fs.writeFileSync(state, JSON.stringify({ number: 7, url: "https://github.com/x/y/pull/7", state: "OPEN" })); console.log("https://github.com/x/y/pull/7"); process.exit(0); }
+if (a === "pr" && b === "checks" && args.includes("--watch")) {
+  if (ci === "none") { console.error("no checks reported on the 'feat' branch"); process.exit(1); }
+  process.exit(ci === "pass" ? 0 : 1);
+}
+if (a === "pr" && b === "checks") {
+  if (ci === "none") { console.log("[]"); process.exit(0); }
+  console.log(JSON.stringify([{ name: "verify", bucket: ci === "pass" ? "pass" : "fail", link: "https://ci/1" }]));
+  process.exit(0);
+}
+if (a === "pr" && b === "merge") { fs.writeFileSync(state, JSON.stringify({ ...pr, state: "MERGED" })); process.exit(0); }
+process.exit(0);
+`,
+);
+chmodSync(join(fakeBin, "gh"), 0o755);
+
+const git = (cwd, ...args) => execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+
+let count = 0;
+// origin(bare) + 작업 복사본. main 에 첫 커밋, feat 브랜치에 커밋 하나.
+function project(team = {}) {
+  count += 1;
+  const root = join(base, `p${count}`);
+  const origin = join(root, "origin.git");
+  const dir = join(root, "work");
+  mkdirSync(root);
+  execFileSync("git", ["init", "-q", "--bare", "-b", "main", origin]);
+  execFileSync("git", ["clone", "-q", origin, dir], { stdio: "ignore" });
+  git(dir, "config", "user.email", "t@t");
+  git(dir, "config", "user.name", "t");
+  git(dir, "switch", "-q", "-c", "main");
+  writeFileSync(join(dir, "a.txt"), "a\n");
+  git(dir, "add", ".");
+  git(dir, "commit", "-q", "-m", "init");
+  git(dir, "push", "-q", "-u", "origin", "main");
+  git(dir, "remote", "set-head", "origin", "main");
+  mkdirSync(join(dir, ".cony"));
+  writeFileSync(join(dir, ".cony", "team.json"), JSON.stringify(team));
+  writeFileSync(join(dir, ".cony", "board.md"), "# 기능\n> 상태: 진행 중 · 마지막 업데이트: 2026-10-28 10:00\n\n## 태스크\n\n## PR\n아직 없음\n");
+  writeFileSync(join(dir, ".gitignore"), ".cony/\n");
+  git(dir, "switch", "-q", "-c", "feat");
+  writeFileSync(join(dir, "b.txt"), "b\n");
+  git(dir, "add", ".");
+  git(dir, "commit", "-q", "-m", "feat");
+  writeFileSync(join(dir, ".cony", "body.md"), "본문\n");
+  return { dir, state: join(root, "gh-state.json") };
+}
+
+function ship(p, args = [], env = {}) {
+  return spawnSync("node", [SCRIPT, ...args], {
+    cwd: p.dir,
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      PATH: `${fakeBin}:${process.env.PATH}`,
+      FAKE_GH_STATE: p.state,
+      CONY_SHIP_NO_CHECKS_RETRY_MS: "1",
+      ...env,
+    },
+  });
+}
+
+const ghLog = (p) => (existsSync(`${p.state}.log`) ? readFileSync(`${p.state}.log`, "utf8") : "");
+
+test("auto: push → PR → CI 통과 → 머지 → 기본 브랜치로 돌아와 최신을 받는다", () => {
+  const p = project();
+  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /ship: PR #7/);
+  assert.match(r.stdout, /ship: CI 통과 \(verify\)/);
+  assert.match(r.stdout, /ship: 머지됨 abcdef1/);
+  assert.match(ghLog(p), /pr merge 7 --squash --delete-branch/);
+  assert.equal(git(p.dir, "branch", "--show-current"), "main");
+  assert.match(git(join(p.dir, "..", "origin.git"), "branch", "--list", "feat"), /feat/, "push 됐다");
+  assert.match(readFileSync(join(p.dir, ".cony", "board.md"), "utf8"), /\[#7\]\(https:\/\/github.com\/x\/y\/pull\/7\) · CI 통과 · 머지됨\(abcdef1\)/);
+  assert.equal(r.stdout.trim().split("\n").length, 5, "단계마다 한 줄씩만 출력한다");
+});
+
+test("CI가 실패하면 머지하지 않고 실패한 검사를 알려준다", () => {
+  const p = project();
+  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"], { FAKE_CI: "fail" });
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /CI 실패 — verify https:\/\/ci\/1/);
+  assert.doesNotMatch(ghLog(p), /pr merge/);
+  assert.match(readFileSync(join(p.dir, ".cony", "board.md"), "utf8"), /CI 실패\(verify\)/);
+});
+
+test("CI가 없으면 머지하지 않는다", () => {
+  const p = project();
+  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"], { FAKE_CI: "none" });
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /CI가 없습니다/);
+  assert.doesNotMatch(ghLog(p), /pr merge/);
+});
+
+test('merge "pr"이면 CI 통과까지만 하고 멈춘다', () => {
+  const p = project({ merge: "pr" });
+  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /머지는 사용자가 합니다/);
+  assert.doesNotMatch(ghLog(p), /pr merge/);
+  assert.equal(git(p.dir, "branch", "--show-current"), "feat");
+});
+
+test('merge "none"이면 push 하지 않는다', () => {
+  const p = project({ merge: "none" });
+  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /사용자가 합니다/);
+  assert.equal(git(join(p.dir, "..", "origin.git"), "branch", "--list", "feat"), "");
+});
+
+test("기본 브랜치에서, 또는 커밋하지 않은 변경이 있으면 실행하지 않는다", () => {
+  const p = project();
+  writeFileSync(join(p.dir, "b.txt"), "changed\n");
+  const dirty = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  assert.notEqual(dirty.status, 0);
+  assert.match(dirty.stderr, /커밋하지 않은 변경/);
+
+  git(p.dir, "checkout", "-q", "--", "b.txt");
+  git(p.dir, "switch", "-q", "main");
+  const onMain = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  assert.notEqual(onMain.status, 0);
+  assert.match(onMain.stderr, /기본 브랜치\(main\)/);
+});
+
+test("PR이 이미 있으면 다시 만들지 않고 그 PR로 대기·머지한다", () => {
+  const p = project();
+  writeFileSync(p.state, JSON.stringify({ number: 9, url: "https://github.com/x/y/pull/9", state: "OPEN" }));
+  const r = ship(p);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /PR #9/);
+  assert.doesNotMatch(ghLog(p), /pr create/);
+});
