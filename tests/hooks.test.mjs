@@ -271,6 +271,45 @@ describe("verify-on-stop: 종료 전 lint + typecheck", () => {
   });
 });
 
+describe("context-on-stop: 긴 리드 세션", () => {
+  const becomeLead = (project, session_id) =>
+    runHook("guard-bash.mjs", { session_id, cwd: project, tool_input: { command: 'node "/plugin/skills/team/board.mjs" --now x' } });
+  // 마지막 응답이 context 토큰을 읽은 대화 기록
+  const transcript = (project, context) => {
+    const path = join(project, `t-${context}.jsonl`);
+    const usage = { input_tokens: 10, cache_read_input_tokens: context - 10, cache_creation_input_tokens: 0, output_tokens: 5 };
+    writeFileSync(path, [JSON.stringify({ type: "user" }), JSON.stringify({ type: "assistant", message: { usage } })].join("\n"));
+    return path;
+  };
+  const stop = (project, session_id, context, extra = {}) =>
+    decisionOf(runHook("context-on-stop.mjs", { cwd: project, session_id, transcript_path: transcript(project, context), ...extra }));
+
+  test("기능을 마친 뒤 대화가 20만을 넘으면 새 세션을 권하고, 15만 더 커지기 전에는 다시 묻지 않음", () => {
+    const project = createProject();
+    writeBoard(project, "완료");
+    becomeLead(project, "ctx-1");
+    assert.equal(stop(project, "ctx-1", 150_000), "allow");
+    assert.equal(stop(project, "ctx-1", 210_000), "block");
+    assert.equal(stop(project, "ctx-1", 300_000), "allow");
+    assert.equal(stop(project, "ctx-1", 370_000), "block");
+    assert.equal(stop(project, "ctx-1", 900_000, { stop_hook_active: true }), "allow");
+  });
+
+  test("진행 중이면 50만까지는 두고, 넘으면 권함", () => {
+    const project = createProject();
+    writeBoard(project, "진행 중");
+    becomeLead(project, "ctx-2");
+    assert.equal(stop(project, "ctx-2", 400_000), "allow");
+    assert.equal(stop(project, "ctx-2", 520_000), "block");
+  });
+
+  test("리드가 아닌 세션은 대화가 커도 그냥 둠", () => {
+    const project = createProject();
+    writeBoard(project, "완료");
+    assert.equal(stop(project, "ctx-viewer", 900_000), "allow");
+  });
+});
+
 describe("board-on-stop / board-on-end: 보드 상태", () => {
   // 리드 = 이 세션에서 board.mjs 를 실행했거나 board.md 를 고친 세션
   const becomeLead = (project, session_id) =>

@@ -105,7 +105,7 @@ export function leadRoots(sessionId) {
 
 export function forgetSession(sessionId) {
   if (!sessionId) return;
-  for (const kind of ["edited", "lead", "board-stop-at", "touched"]) rmSync(sessionFile(sessionId, kind), { force: true });
+  for (const kind of ["edited", "lead", "board-stop-at", "context-warned", "touched"]) rmSync(sessionFile(sessionId, kind), { force: true });
 }
 
 export function sessionRoots(input) {

@@ -16,6 +16,7 @@
 //   todo → progress → review → done, review → progress(되돌림), 어디서든 → todo
 //   건너뛰기(todo→review, todo/progress→done)는 막는다.
 //   review → done 은 qa 기록(team.json 의 qa 설정에 따라)과 커밋되지 않은 변경 없음을 확인한다.
+//   --status 완료 는 "사용자 확인 필요"가 비어 있어야 한다.
 //   --skip-reason "이유" 로 넘어갈 수 있지만 log.md 에 `놓침`으로, 지표에 gate_bypassed 로 남는다.
 
 import { execFileSync, spawnSync } from "node:child_process";
@@ -274,6 +275,16 @@ for (const value of values.task ?? []) {
   board.sections["태스크"] = t.updated;
   transitions.push(t);
   problems.push(...gateProblems(t.number, t.from, t.to));
+}
+// 완료로 바꾸면서 사용자 확인 필요를 남겨 두면, 답을 기다리는 건지 잊힌 건지 알 수 없게 된다
+if (values.status === "완료") {
+  const attention = values.attention ? listOrNone(values.attention) : board.sections["사용자 확인 필요"];
+  const open = attention.split("\n").filter((l) => /^- /.test(l) && !/^- (none|없음)\s*$/i.test(l));
+  if (open.length) {
+    problems.push(
+      `완료로 바꾸려는데 사용자 확인 필요가 ${open.length}개 남아 있습니다.\n${open.join("\n")}\n답을 받았으면 --attention none(남은 것만 다시 주어도 된다), 기다리는 중이면 --status "사용자 대기", 나중으로 미루면 스펙의 "다음 단계 후보"로 옮기고 --attention none.`,
+    );
+  }
 }
 const skipReason = values["skip-reason"];
 if (problems.length && !skipReason) {

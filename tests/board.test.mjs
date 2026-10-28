@@ -292,3 +292,18 @@ test("--attention none 을 다른 항목과 같이 주면 none 은 빠진다", (
   assert.match(text, /## 사용자 확인 필요\n- 기본 LTV 확인\n/);
   assert.doesNotMatch(text, /- none/);
 });
+
+test("사용자 확인 필요가 남아 있으면 완료로 바꾸지 않는다", () => {
+  const dir = createProject();
+  board(dir, "--init", "--goal", "계산기", "--spec", "specs/calc.md");
+  board(dir, "--attention", "기본 LTV 확인");
+  const blocked = board(dir, "--status", "완료");
+  assert.notEqual(blocked.status, 0);
+  assert.match(blocked.stderr, /사용자 확인 필요가 1개 남아 있습니다/);
+  assert.match(readFileSync(join(dir, ".cony", "board.md"), "utf8"), /상태: 진행 중/);
+
+  assert.equal(board(dir, "--status", "사용자 대기").status, 0, "기다리는 중이면 사용자 대기는 된다");
+  const r = board(dir, "--status", "완료", "--attention", "none");
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(readFileSync(join(dir, ".cony", "board.md"), "utf8"), /상태: 완료/);
+});

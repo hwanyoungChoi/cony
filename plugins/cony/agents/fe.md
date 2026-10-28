@@ -50,7 +50,8 @@ model: inherit
 
 1. 스펙과 기존 화면 구조를 읽는다.
 2. API 훅 → 화면 컴포넌트 → 라우팅 연결 순서로 구현한다.
-3. 프로젝트 `CLAUDE.md`의 검증 명령(없으면 lint, format:check, test, build)을 실행해 통과시킨다.
+3. 테스트는 바꾼 동작과 새 순수 함수를 지키는 만큼만 쓴다. 버그 되살리기나 변이 실험은 하지 않는다(필요한 곳은 qa가 한다).
+4. 프로젝트 `CLAUDE.md`의 검증 명령(없으면 lint, format:check, test, build)을 실행해 통과시킨다.
 
 ## 넘길 문서 모드
 
