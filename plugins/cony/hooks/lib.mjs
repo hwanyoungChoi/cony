@@ -1,6 +1,8 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export function readInput() {
   try {
@@ -141,4 +143,30 @@ export function logEvent(root, event) {
   } catch {
     // 기록 실패는 무시
   }
+}
+
+// 오래 켜 둔 세션은 스킬을 처음 불러온 버전의 경로로 스크립트를 계속 부른다.
+// 플러그인 캐시에 더 새 버전이 깔려 있으면 같은 스크립트의 새 버전을 대신 실행하고 그 결과로 끝낸다.
+export function runNewerInstall(scriptUrl) {
+  const newer = newerInstall(fileURLToPath(scriptUrl));
+  if (!newer) return;
+  const r = spawnSync(process.execPath, [newer, ...process.argv.slice(2)], { stdio: "inherit" });
+  process.exit(r.status ?? 1);
+}
+
+function newerInstall(self) {
+  const m = self.match(/^(.*[\\/]plugins[\\/]cache[\\/][^\\/]+[\\/]cony)[\\/]([^\\/]+)[\\/](skills[\\/].+)$/);
+  if (!m) return null;
+  const [, base, current, rel] = m;
+  const parse = (v) => v.split(".").map(Number);
+  const compare = (a, b) => {
+    const [x, y] = [parse(a), parse(b)];
+    for (let i = 0; i < Math.max(x.length, y.length); i += 1) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) - (y[i] ?? 0);
+    return 0;
+  };
+  const latest = readdirSync(base)
+    .filter((v) => /^\d+(\.\d+)*$/.test(v) && existsSync(join(base, v, rel)))
+    .sort(compare)
+    .at(-1);
+  return latest && compare(latest, current) > 0 ? join(base, latest, rel) : null;
 }

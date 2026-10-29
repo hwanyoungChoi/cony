@@ -204,3 +204,18 @@ test("PR이 이미 있으면 다시 만들지 않고 그 PR로 대기·머지한
   assert.match(r.stdout, /PR #9/);
   assert.doesNotMatch(ghLog(p), /pr create/);
 });
+
+test("플러그인 캐시의 예전 버전으로 불리면 설치된 최신 버전에 넘긴다", () => {
+  const cony = join(base, "plugins", "cache", "conychoi-plugins", "cony");
+  for (const v of ["0.21.0", "0.21.1"]) {
+    mkdirSync(join(cony, v, "skills", "team"), { recursive: true });
+    mkdirSync(join(cony, v, "hooks"), { recursive: true });
+    writeFileSync(join(cony, v, "hooks", "lib.mjs"), readFileSync(new URL("../plugins/cony/hooks/lib.mjs", import.meta.url)));
+  }
+  writeFileSync(join(cony, "0.21.0", "skills", "team", "ship.mjs"), readFileSync(SCRIPT));
+  writeFileSync(join(cony, "0.21.1", "skills", "team", "ship.mjs"), 'console.log("latest", process.argv.slice(2).join(" "));\nprocess.exit(3);\n');
+
+  const r = spawnSync("node", [join(cony, "0.21.0", "skills", "team", "ship.mjs"), "--title", "기능"], { encoding: "utf8" });
+  assert.equal(r.status, 3);
+  assert.equal(r.stdout.trim(), "latest --title 기능");
+});

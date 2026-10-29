@@ -17,7 +17,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
-import { findConyRoot, logEvent, readTeamConfig } from "../../hooks/lib.mjs";
+import { findConyRoot, logEvent, readTeamConfig, runNewerInstall } from "../../hooks/lib.mjs";
+
+runNewerInstall(import.meta.url);
 
 const { values } = parseArgs({
   options: {
