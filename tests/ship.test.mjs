@@ -36,7 +36,12 @@ if (a === "pr" && b === "checks") {
   console.log(JSON.stringify([{ name: "verify", bucket: ci === "pass" ? "pass" : "fail", link: "https://ci/1" }]));
   process.exit(0);
 }
-if (a === "pr" && b === "merge") { fs.writeFileSync(state, JSON.stringify({ ...pr, state: "MERGED" })); process.exit(0); }
+if (a === "pr" && b === "merge") {
+  // 원격에서 머지된 것처럼 작업 브랜치를 origin/main 에 올린다(squash 와 내용은 같다).
+  require("child_process").execFileSync("git", ["push", "-q", "origin", "HEAD:main"], { stdio: "ignore" });
+  fs.writeFileSync(state, JSON.stringify({ ...pr, state: "MERGED" }));
+  process.exit(0);
+}
 process.exit(0);
 `,
 );
@@ -46,7 +51,8 @@ const git = (cwd, ...args) => execFileSync("git", args, { cwd, encoding: "utf8",
 
 let count = 0;
 // origin(bare) + 작업 복사본. main 에 첫 커밋, feat 브랜치에 커밋 하나.
-function project(team = {}) {
+// tracked: 보드와 이벤트 기록을 git이 추적하고, feat 커밋에서 둘 다 바꾼다(모기지핏처럼).
+function project(team = {}, { tracked = false } = {}) {
   count += 1;
   const root = join(base, `p${count}`);
   const origin = join(root, "origin.git");
@@ -58,16 +64,21 @@ function project(team = {}) {
   git(dir, "config", "user.name", "t");
   git(dir, "switch", "-q", "-c", "main");
   writeFileSync(join(dir, "a.txt"), "a\n");
+  mkdirSync(join(dir, ".cony", "metrics"), { recursive: true });
+  writeFileSync(join(dir, ".cony", "team.json"), JSON.stringify(team));
+  writeFileSync(join(dir, ".cony", "board.md"), "# 기능\n> 상태: 진행 중 · 마지막 업데이트: 2026-10-28 10:00\n\n## 태스크\n\n## PR\n아직 없음\n");
+  writeFileSync(join(dir, ".cony", "metrics", "events.jsonl"), '{"type":"start"}\n');
+  writeFileSync(join(dir, ".gitignore"), tracked ? ".cony/team.json\n" : ".cony/\n");
   git(dir, "add", ".");
   git(dir, "commit", "-q", "-m", "init");
   git(dir, "push", "-q", "-u", "origin", "main");
   git(dir, "remote", "set-head", "origin", "main");
-  mkdirSync(join(dir, ".cony"));
-  writeFileSync(join(dir, ".cony", "team.json"), JSON.stringify(team));
-  writeFileSync(join(dir, ".cony", "board.md"), "# 기능\n> 상태: 진행 중 · 마지막 업데이트: 2026-10-28 10:00\n\n## 태스크\n\n## PR\n아직 없음\n");
-  writeFileSync(join(dir, ".gitignore"), ".cony/\n");
   git(dir, "switch", "-q", "-c", "feat");
   writeFileSync(join(dir, "b.txt"), "b\n");
+  if (tracked) {
+    writeFileSync(join(dir, ".cony", "board.md"), "# 기능\n> 상태: 진행 중 · 마지막 업데이트: 2026-10-28 11:00\n\n## 태스크\n- [x] 1. 표 내보내기\n\n## PR\n아직 없음\n");
+    writeFileSync(join(dir, ".cony", "metrics", "events.jsonl"), '{"type":"start"}\n{"type":"task"}\n');
+  }
   git(dir, "add", ".");
   git(dir, "commit", "-q", "-m", "feat");
   writeFileSync(join(dir, ".cony", "body.md"), "본문\n");
@@ -102,6 +113,39 @@ test("auto: push → PR → CI 통과 → 머지 → 기본 브랜치로 돌아�
   assert.match(git(join(p.dir, "..", "origin.git"), "branch", "--list", "feat"), /feat/, "push 됐다");
   assert.match(readFileSync(join(p.dir, ".cony", "board.md"), "utf8"), /\[#7\]\(https:\/\/github.com\/x\/y\/pull\/7\) · CI 통과 · 머지됨\(abcdef1\)/);
   assert.equal(r.stdout.trim().split("\n").length, 5, "단계마다 한 줄씩만 출력한다");
+});
+
+test("추적되는 보드를 ship이 고쳐도 머지 뒤 기본 브랜치로 돌아오고, 보드·이벤트 기록이 남는다", () => {
+  const p = project({}, { tracked: true });
+  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /ship: 머지됨 abcdef1 · main 최신으로 받음/);
+  assert.equal(git(p.dir, "branch", "--show-current"), "main");
+  assert.equal(git(p.dir, "rev-parse", "HEAD"), git(p.dir, "rev-parse", "feat"), "머지된 내용을 받았다");
+  const board = readFileSync(join(p.dir, ".cony", "board.md"), "utf8");
+  assert.match(board, /- \[x\] 1\. 표 내보내기/, "브랜치에서 커밋한 보드 내용");
+  assert.match(board, /\[#7\]\(https:\/\/github.com\/x\/y\/pull\/7\) · CI 통과 · 머지됨\(abcdef1\)/);
+  const events = readFileSync(join(p.dir, ".cony", "metrics", "events.jsonl"), "utf8").trim().split("\n");
+  assert.deepEqual(events.slice(0, 2).map((line) => JSON.parse(line).type), ["start", "task"]);
+  assert.match(events.at(-1), /"type":"ship".*"result":"merged"/);
+  assert.doesNotMatch(events.at(-1), /sync/);
+});
+
+test("머지 뒤 기본 브랜치를 최신으로 받지 못하면 머지는 기록하고, 이유를 알려주고 끝낸다", () => {
+  const p = project({}, { tracked: true });
+  // 로컬 main 에만 있는 커밋이 있으면 pull --ff-only 가 멈춘다.
+  git(p.dir, "switch", "-q", "main");
+  writeFileSync(join(p.dir, "c.txt"), "local\n");
+  git(p.dir, "add", "c.txt");
+  git(p.dir, "commit", "-q", "-m", "로컬에만");
+  git(p.dir, "switch", "-q", "feat");
+  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /머지됨 abcdef1 · 그런데 main로 돌아오지 못했습니다/);
+  assert.match(r.stderr, /fast-forward/i);
+  const events = readFileSync(join(p.dir, ".cony", "metrics", "events.jsonl"), "utf8").trim().split("\n");
+  assert.match(events.at(-1), /"result":"merged","sync":"failed"/);
+  assert.match(readFileSync(join(p.dir, ".cony", "board.md"), "utf8"), /머지됨\(abcdef1\)/);
 });
 
 test("CI가 실패하면 머지하지 않고 실패한 검사를 알려준다", () => {

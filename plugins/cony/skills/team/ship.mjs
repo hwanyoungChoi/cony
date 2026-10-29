@@ -12,6 +12,7 @@
 // CI를 기다리느라 오래 걸리므로 백그라운드로 실행한다.
 
 import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -88,12 +89,20 @@ if (merge !== "auto") {
   process.exit(0);
 }
 
-run("gh", ["pr", "merge", String(pr.number), "--squash", "--delete-branch"]);
+// ship이 고친 보드·이벤트 기록(.cony/ 아래 추적 파일)이 남아 있으면 기본 브랜치로 바꿀 때
+// "local changes would be overwritten"으로 멈춘다(모기지핏 PR #52·#53). 커밋된 내용으로 잠시 되돌렸다가 돌아온 뒤 다시 얹는다.
+const held = holdConyChanges();
+mergePr(pr.number);
 const sha = (tryRun("gh", ["pr", "view", String(pr.number), "--json", "mergeCommit", "-q", ".mergeCommit.oid"]) ?? "").slice(0, 7);
-if (run("git", ["branch", "--show-current"]) !== base) run("git", ["switch", base]);
-run("git", ["pull", "--ff-only", "-q"]);
+let syncError = run("git", ["branch", "--show-current"]) !== base ? gitError(["switch", base]) : null;
+syncError ??= gitError(["pull", "--ff-only", "-q"]);
+restoreConyChanges(held);
 board(`[#${pr.number}](${pr.url}) · CI 통과 · 머지됨${sha ? `(${sha})` : ""}`);
-logEvent(conyRoot, { type: "ship", pr: pr.number, result: "merged" });
+logEvent(conyRoot, { type: "ship", pr: pr.number, result: "merged", ...(syncError ? { sync: "failed" } : {}) });
+if (syncError) {
+  const status = tryRun("git", ["status", "--porcelain"]);
+  fail(`머지됨${sha ? ` ${sha}` : ""} · 그런데 ${base}로 돌아오지 못했습니다. 아래를 정리하고 git switch ${base} && git pull 하세요.\n${syncError}${status ? `\n${status}` : ""}`);
+}
 say(`머지됨${sha ? ` ${sha}` : ""} · ${base} 최신으로 받음`);
 
 function prOfBranch() {
@@ -122,6 +131,55 @@ function waitForChecks(number) {
     sleep(NO_CHECKS_RETRY_MS);
   }
   fail("CI가 없습니다. CI가 통과해야 머지할 수 있습니다(/cony:setup 의 CI 단계).");
+}
+
+// gh pr merge --delete-branch 는 원격 머지 뒤 로컬에서 브랜치를 바꾸다 실패해도 0이 아닌 값으로 끝난다. 머지됐는지는 PR 상태로 본다.
+function mergePr(number) {
+  try {
+    run("gh", ["pr", "merge", String(number), "--squash", "--delete-branch"]);
+  } catch (error) {
+    if (tryRun("gh", ["pr", "view", String(number), "--json", "state", "-q", ".state"]) === "MERGED") return;
+    restoreConyChanges(held);
+    fail(`머지 실패 — ${(error.stderr || error.message).trim()}`);
+  }
+}
+
+function gitError(args) {
+  try {
+    run("git", args);
+    return null;
+  } catch (error) {
+    return (error.stderr || error.message).trim();
+  }
+}
+
+// .cony/ 아래에서 커밋된 것과 달라진 추적 파일을 기억해 두고 커밋된 내용으로 되돌린다.
+function holdConyChanges() {
+  const top = run("git", ["rev-parse", "--show-toplevel"]);
+  const files = run("git", ["diff", "--name-only", "HEAD", "--", join(conyRoot, ".cony")]).split("\n").filter(Boolean);
+  const held = [];
+  for (const file of files) {
+    const path = join(top, file);
+    let committed;
+    try {
+      committed = execFileSync("git", ["show", `HEAD:${file}`], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    } catch {
+      continue; // 아직 커밋된 적 없는 파일은 브랜치를 바꿔도 남는다
+    }
+    if (existsSync(path)) held.push({ file, path, committed, mine: readFileSync(path, "utf8") });
+  }
+  if (held.length) run("git", ["checkout", "HEAD", "--", ...held.map(({ file }) => `:(top)${file}`)]);
+  return held;
+}
+
+// 지금 파일이 되돌릴 때의 커밋 내용 그대로면(squash 머지된 기본 브랜치도 같다) 기억한 내용을 그대로 얹는다.
+// 기본 브랜치에서 달라졌으면 덧붙인 줄(events.jsonl 등)만 이어 붙이고, 덮어쓰는 파일(보드)은 기본 브랜치 것을 둔다.
+function restoreConyChanges(held) {
+  for (const { path, committed, mine } of held) {
+    const now = existsSync(path) ? readFileSync(path, "utf8") : "";
+    if (now === committed) writeFileSync(path, mine);
+    else if (mine.startsWith(committed)) writeFileSync(path, now + mine.slice(committed.length));
+  }
 }
 
 function board(pr) {
