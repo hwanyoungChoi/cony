@@ -250,3 +250,5 @@ hook이나 스크립트를 고친 뒤에는 테스트를 돌린다. 실제 ESLin
 ```bash
 node --test tests/hooks.test.mjs tests/board.test.mjs tests/stats.test.mjs tests/cli.test.mjs tests/ship.test.mjs
 ```
+
+버전은 `plugins/cony/.claude-plugin/plugin.json`에서 올린다. 그 커밋이 main에 올라오면 GitHub Actions가 `v{버전}` 태그와 Release를 만든다. 커밋 제목이 Release 제목이 되고 본문이 노트가 되므로, 버전을 올리는 커밋에는 무엇이 왜 바뀌었는지 적는다.
