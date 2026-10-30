@@ -1,6 +1,6 @@
 // cony 지표: 비용·과정별 시간(대화 기록), 흐름(이벤트), 토론(ADR·검토 원문), 사람 개입(log.md), hook 차단(이벤트)
 // since(ISO 날짜·시각)를 주면 그 뒤만 센다. 규칙을 바꾼 뒤 효과를 이전과 따로 보려고.
-// log.md 는 줄마다 날짜가 없어서 구간 보기에서는 사람 개입을 세지 않는다.
+// log.md 는 항목 앞의 날짜("- 2026-10-30 요청: ...")로 가른다. 날짜 없는 항목은 구간 보기에서 빠진다.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -346,13 +346,32 @@ function debateStats(conyDir, since, events) {
   };
 }
 
-function peopleStats(conyDir) {
+function peopleStats(conyDir, since) {
   const path = join(conyDir, "log.md");
   const text = existsSync(path) ? readFileSync(path, "utf8") : "";
-  // "- `요청` ..." 과 "- 요청: ..." 두 표기를 모두 센다
-  return Object.fromEntries(
-    LOG_TAGS.map((tag) => [tag, (text.match(new RegExp(`^\\s*-\\s*(?:\`${tag}\`|${tag}\\s*[:：])`, "gm")) ?? []).length]),
-  );
+  // "- 2026-10-30 요청: ...", "- `요청` ...", "- 요청: ..." 를 모두 센다. since 가 있으면 날짜 있는 항목만, 그 날짜 이후만.
+  const sinceDay = since ? localDay(since) : null;
+  const counts = Object.fromEntries(LOG_TAGS.map((tag) => [tag, 0]));
+  let undated = 0;
+  for (const m of text.matchAll(/^\s*-\s*(?:(\d{4}-\d{2}-\d{2})\s+)?(?:`([^`]+)`|([^:：\n`]{1,4})\s*[:：])/gm)) {
+    const tag = m[2] ?? m[3];
+    if (!(tag in counts)) continue;
+    if (sinceDay) {
+      if (!m[1]) {
+        undated += 1;
+        continue;
+      }
+      if (m[1] < sinceDay) continue;
+    }
+    counts[tag] += 1;
+  }
+  return { ...counts, undated };
+}
+
+// ISO 시각을 이 컴퓨터 시간대의 YYYY-MM-DD 로
+function localDay(iso) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export function computeStats(root, { since } = {}) {
@@ -366,7 +385,7 @@ export function computeStats(root, { since } = {}) {
     flow: flowStats(events),
     hooks: hookStats(events),
     debate: debateStats(conyDir, since, events),
-    people: since ? null : peopleStats(conyDir),
+    people: peopleStats(conyDir, since),
     generatedAt: new Date().toISOString(),
   };
 }

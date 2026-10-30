@@ -43,7 +43,7 @@ cony() { node "$(ls -d ~/.claude/plugins/cache/conychoi-plugins/cony/*/ | sort -
 ```
 cony board          # 칸반, 확인 필요·막힌 것, 최근 결정 (--all: 백로그까지)
 cony stats          # 역할별 토큰, 과정별 시간, 흐름, 토론, 사람 개입, hook 차단
-cony stats --since 2026-10-28 09:00   # 그 시각 뒤만. 규칙을 바꾼 뒤나 기능 하나의 숫자를 따로 볼 때
+cony stats --since 2026-10-28 09:00   # 그 시각 뒤만. 규칙을 바꾼 뒤나 기능 하나의 숫자를 따로 볼 때 (log.md는 날짜 있는 항목만)
 cony watch          # 띄워 두면 바뀔 때마다 다시 그린다 (cony watch stats 도 된다)
 ```
 
@@ -120,6 +120,7 @@ cony watch          # 띄워 두면 바뀔 때마다 다시 그린다 (cony watc
 | 화면 확인은 qa가 (Playwright), 리드는 브라우저를 열지 않음 | qa, 리드 | 리드 대화의 약 18%가 리드가 직접 찍은 스크린샷이었다 |
 | push부터 머지까지 `ship.mjs` 한 번 | 리드 | 리드 대화의 약 28%가 git·gh 명령과 CI 출력이었다 |
 | 리드는 코드를 읽거나 검증 명령을 돌리지 않음 | 리드 | 위 규칙들 뒤에도 리드가 이틀간 검증 명령 49번, 파일 읽기 94번을 직접 했다 |
+| 컨벤션 검사는 fe·be 자체 점검 + qa 지목, 리드는 코드 리뷰를 띄우지 않음 | fe, be, qa | 리드가 띄운 코드 리뷰 보조 에이전트가 전체 토큰의 13%를 썼다 |
 | 단계 배포·배포 후 대기 같은 운영 절차는 사용자 수에 맞춤 | 리드 | 두 사람이 쓰는 앱에 "배포 후 24시간 대기"를 넣었다가 사람이 되돌렸다 |
 | 오래 켜 둔 리드에게 바뀐 팀 지침을 다시 읽게 함 (hook) | 리드 | 리드가 0.18.1 지침으로 0.21까지 일해서 0.20·0.21의 리드 규칙이 한 번도 적용되지 않았다 |
 
@@ -235,7 +236,7 @@ hook은 `.cony/`가 있는 프로젝트에서만 동작하고, 다른 프로젝�
 | `cony` | 하네스: 에이전트, hook, team·board·status·setup 스킬 | 이 저장소 |
 | `development` | `commit-message`, `code-review-fe`, `spec-review` 스킬 | [my-plugins](https://github.com/hwanyoungChoi/my-plugins) |
 
-- 팀은 기획서가 있으면 `spec-review`, REVIEW 단계에서 `code-review-fe`를 쓴다. 커밋 메시지는 같은 형식(영문 prefix + 한글 본문)으로 리드가 바로 쓴다. 팀 흐름에서 `commit-message`를 부르게 했을 때 한 번도 쓰이지 않았다.
+- 팀은 기획서가 있으면 `spec-review`를 쓴다. 컨벤션 검사는 fe·be의 자체 점검과 qa의 지목으로 하고, 커밋 메시지는 리드가 같은 형식(영문 prefix + 한글 본문)으로 바로 쓴다. `code-review-fe`·`commit-message`를 팀 흐름에서 부르게 했을 때, 하나는 diff를 리드로 끌어들였고 하나는 한 번도 쓰이지 않았다.
 - `development`는 my-plugins 저장소를 가리키기만 한다. 스킬은 거기서 고친다.
 - 같은 이름(`development`)의 플러그인을 이미 쓰는 컴퓨터에는 설치하지 않는다. 스킬 이름이 겹친다.
 

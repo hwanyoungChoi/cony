@@ -100,7 +100,7 @@ test("stats --since: 구간을 머리에 보여주고, 날짜 없는 사람 개�
   const r = run(dir, ["stats", "--since", "2026-10-28", "09:30"]);
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /2026-10-28 09:30부터만/);
-  assert.match(r.stdout, /사람 개입은 log\.md 에 줄마다 날짜가 없어/);
+  assert.match(r.stdout, /사람 개입/);
   const bad = run(dir, ["stats", "--since", "어제"]);
   assert.notEqual(bad.status, 0);
   assert.match(bad.stderr, /2026-10-28 09:00 형식/);

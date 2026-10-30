@@ -312,11 +312,12 @@ function renderStats(root, since) {
       ["사람에게 넘긴 문서", d.handoffs],
     ]),
   );
-  if (s.people) {
-    out.push("", bold("사람 개입") + dim(" (log.md)"), `  ${Object.entries(s.people).map(([k, v]) => `${dim(k)} ${bold(String(v))}`).join("   ")}`);
-  } else {
-    out.push("", dim("사람 개입은 log.md 에 줄마다 날짜가 없어 구간 보기에서 뺐다"));
-  }
+  const { undated, ...people } = s.people;
+  out.push(
+    "",
+    bold("사람 개입") + dim(" (log.md)") + (since && undated ? dim(`  날짜 없는 항목 ${undated}개는 뺌`) : ""),
+    `  ${Object.entries(people).map(([k, v]) => `${dim(k)} ${bold(String(v))}`).join("   ")}`,
+  );
   out.push("", bold("hook이 막은 횟수"));
   const hooks = Object.entries(s.hooks);
   if (!hooks.length) out.push(dim("  아직 없음"));

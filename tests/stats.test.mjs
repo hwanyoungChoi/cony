@@ -72,7 +72,7 @@ test("이벤트·ADR·검토·log.md에서 흐름, 토론, 사람 개입, hook �
   assert.equal(s.debate.reversedByUser, 1);
   assert.deepEqual(s.debate.verdicts, { 찬성: 0, 조건부: 1, 반대: 1, 기타: 0 });
   assert.equal(s.debate.handoffs, 1);
-  assert.deepEqual(s.people, { 요청: 2, 토론: 0, AI: 1, 되돌림: 0, 놓침: 1 });
+  assert.deepEqual(s.people, { 요청: 2, 토론: 0, AI: 1, 되돌림: 0, 놓침: 1, undated: 0 });
 });
 
 test("과정별 시간: 머리표·역할로 과정을 가르고, 구현 중 테스트와 리드 조율 시간을 추정한다", () => {
@@ -149,7 +149,7 @@ test("since: 그 시각 뒤의 토큰·시간·이벤트·검토·결정만 세�
   writeFileSync(join(root, ".cony", "decisions", "002-new.md"), "# ADR-002\n- 상태: 채택\n- 의견: qa(반대, 근거)\n");
   writeFileSync(join(root, ".cony", "reviews", "20261020-1000-qa-spec-x.md"), "판정: 반대\n");
   writeFileSync(join(root, ".cony", "reviews", "20261030-1000-qa-spec-x.md"), "판정: 찬성\n");
-  writeFileSync(join(root, ".cony", "log.md"), "- 요청: a\n");
+  writeFileSync(join(root, ".cony", "log.md"), "- 요청: a\n- 2026-10-27 되돌림: 옛것\n- 2026-10-29 되돌림: 새것\n- 2026-10-29 놓침: 새것\n");
 
   const s = computeStats(root, { since: "2026-10-28T00:00:00.000Z" });
   assert.equal(s.cost.byRole["리드"].calls, 1);
@@ -162,10 +162,11 @@ test("since: 그 시각 뒤의 토큰·시간·이벤트·검토·결정만 세�
   assert.equal(s.debate.adrs, 1, "board.mjs --decision 기록이 since 뒤인 ADR만");
   assert.equal(s.debate.adrsWithDissent, 1);
   assert.deepEqual(s.debate.verdicts, { 찬성: 1, 조건부: 0, 반대: 0, 기타: 0 });
-  assert.equal(s.people, null);
+  assert.deepEqual(s.people, { 요청: 0, 토론: 0, AI: 0, 되돌림: 1, 놓침: 1, undated: 1 }, "날짜 있는 항목만, since 뒤만");
 
   const all = computeStats(root);
   assert.equal(all.cost.byRole["리드"].calls, 2);
   assert.equal(all.debate.adrs, 2);
   assert.equal(all.people.요청, 1);
+  assert.equal(all.people.되돌림, 2);
 });
