@@ -22,7 +22,8 @@ function commandDirs() {
 
 const cwd = commandDirs().reverse().find((dir) => findConyRoot(dir));
 if (!cwd) process.exit(0);
-if (/\bboard\.mjs\b/.test(command)) rememberRoot(input.session_id, findConyRoot(cwd), "lead");
+// board.mjs 를 실행한 세션만 리드다. grep·sed 로 코드를 읽기만 한 세션까지 리드로 보면 보드·대화 크기 hook이 엉뚱한 세션을 붙잡는다.
+if (/\bnode\s+(?:"[^"]*\bboard\.mjs"|'[^']*\bboard\.mjs'|\S*\bboard\.mjs)(?:\s|$)/.test(command)) rememberRoot(input.session_id, findConyRoot(cwd), "lead");
 
 // "git -C 경로 push" 도 "git push" 와 같은 규칙에 걸리게 한다.
 const normalized = command.replace(/\bgit\s+-C\s+("[^"]+"|'[^']+'|\S+)\s+/g, "git ");

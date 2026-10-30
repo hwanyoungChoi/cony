@@ -308,6 +308,17 @@ describe("context-on-stop: 긴 리드 세션", () => {
     writeBoard(project, "완료");
     assert.equal(stop(project, "ctx-viewer", 900_000), "allow");
   });
+
+  test("board.mjs 를 읽기만 한 세션은 리드가 아니다", () => {
+    const project = createProject();
+    writeBoard(project, "완료");
+    for (const command of ['grep -n "decision" /plugin/skills/team/board.mjs', "sed -n 1,20p /plugin/skills/team/board.mjs", "node --check /plugin/skills/team/board.mjs.bak"]) {
+      runHook("guard-bash.mjs", { session_id: "ctx-reader", cwd: project, tool_input: { command } });
+    }
+    assert.equal(stop(project, "ctx-reader", 900_000), "allow");
+    runHook("guard-bash.mjs", { session_id: "ctx-runner", cwd: project, tool_input: { command: "node /plugin/skills/team/board.mjs --status 완료" } });
+    assert.equal(stop(project, "ctx-runner", 900_000), "block");
+  });
 });
 
 describe("skill-update-on-prompt: 오래 켜 둔 리드에 바뀐 지침 알림", () => {
