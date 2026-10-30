@@ -1,4 +1,6 @@
 // cony 지표: 비용·과정별 시간(대화 기록), 흐름(이벤트), 토론(ADR·검토 원문), 사람 개입(log.md), hook 차단(이벤트)
+// since(ISO 날짜·시각)를 주면 그 뒤만 센다. 규칙을 바꾼 뒤 효과를 이전과 따로 보려고.
+// log.md 는 줄마다 날짜가 없어서 구간 보기에서는 사람 개입을 세지 않는다.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -19,14 +21,14 @@ function roleOf(agentType) {
 
 const fileCache = new Map();
 
-// 한 대화 기록 파일의 토큰 합계. 같은 응답이 여러 줄로 나뉘어 기록되므로 message.id 로 한 번만 센다.
-function usageOf(path) {
+// 한 대화 기록 파일의 응답별 토큰. 같은 응답이 여러 줄로 나뉘어 기록되므로 message.id 로 한 번만 센다.
+function responsesOf(path) {
   const { mtimeMs, size } = statSync(path);
   const key = `${path}:${mtimeMs}:${size}`;
   const cached = fileCache.get(path);
   if (cached?.key === key) return cached.value;
   const seen = new Set();
-  const value = { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, byModel: {}, first: null, last: null };
+  const value = [];
   for (const line of readFileSync(path, "utf8").split("\n")) {
     if (!line.includes('"assistant"')) continue;
     let d;
@@ -40,17 +42,28 @@ function usageOf(path) {
     if (seen.has(id)) continue;
     seen.add(id);
     const u = d.message.usage;
-    const add = { input: u.input_tokens ?? 0, output: u.output_tokens ?? 0, cacheRead: u.cache_read_input_tokens ?? 0, cacheWrite: u.cache_creation_input_tokens ?? 0 };
-    value.calls += 1;
-    for (const k of Object.keys(add)) value[k] += add[k];
-    const model = d.message.model ?? "unknown";
-    value.byModel[model] = (value.byModel[model] ?? 0) + add.input + add.output + add.cacheRead + add.cacheWrite;
-    if (d.timestamp) {
-      value.first = value.first && value.first < d.timestamp ? value.first : d.timestamp;
-      value.last = value.last && value.last > d.timestamp ? value.last : d.timestamp;
-    }
+    value.push({
+      ts: d.timestamp ?? null,
+      model: d.message.model ?? "unknown",
+      input: u.input_tokens ?? 0,
+      output: u.output_tokens ?? 0,
+      cacheRead: u.cache_read_input_tokens ?? 0,
+      cacheWrite: u.cache_creation_input_tokens ?? 0,
+    });
   }
   fileCache.set(path, { key, value });
+  return value;
+}
+
+function usageOf(path, since) {
+  const value = { calls: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, byModel: {}, first: null };
+  for (const r of responsesOf(path)) {
+    if (since && (!r.ts || r.ts < since)) continue;
+    value.calls += 1;
+    for (const k of ["input", "output", "cacheRead", "cacheWrite"]) value[k] += r[k];
+    value.byModel[r.model] = (value.byModel[r.model] ?? 0) + r.input + r.output + r.cacheRead + r.cacheWrite;
+    if (r.ts && (!value.first || r.ts < value.first)) value.first = r.ts;
+  }
   return value;
 }
 
@@ -65,20 +78,21 @@ function addTo(bucket, u) {
   bucket.total = bucket.input + bucket.output + bucket.cacheRead + bucket.cacheWrite;
 }
 
-function costStats(root) {
+function costStats(root, since) {
   const dir = transcriptsDir(root);
   const byRole = {};
   const byModel = {};
-  let since = null;
-  if (!existsSync(dir)) return { byRole, byModel, total: emptyBucket(), since, found: false };
+  let first = null;
+  if (!existsSync(dir)) return { byRole, byModel, total: emptyBucket(), since: null, found: false };
   const merge = (role, u) => {
+    if (u.calls === 0) return;
     byRole[role] ??= emptyBucket();
     addTo(byRole[role], u);
     for (const [model, n] of Object.entries(u.byModel)) byModel[model] = (byModel[model] ?? 0) + n;
-    if (u.first && (!since || u.first < since)) since = u.first;
+    if (u.first && (!first || u.first < first)) first = u.first;
   };
   for (const name of readdirSync(dir)) {
-    if (name.endsWith(".jsonl")) merge("리드", usageOf(join(dir, name)));
+    if (name.endsWith(".jsonl")) merge("리드", usageOf(join(dir, name), since));
     const subDir = join(dir, name, "subagents");
     if (!existsSync(subDir)) continue;
     for (const sub of readdirSync(subDir)) {
@@ -89,7 +103,7 @@ function costStats(root) {
       } catch {
         // meta 없음
       }
-      merge(roleOf(meta.agentType), usageOf(join(subDir, sub)));
+      merge(roleOf(meta.agentType), usageOf(join(subDir, sub), since));
     }
   }
   const total = emptyBucket();
@@ -98,7 +112,7 @@ function costStats(root) {
     total.calls += b.calls;
     for (const k of ["input", "output", "cacheRead", "cacheWrite", "total"]) total[k] += b[k];
   }
-  return { byRole, byModel, total, since, found: true };
+  return { byRole, byModel, total, since: first, found: true };
 }
 
 // ── 과정별 시간 (추정) ──
@@ -188,7 +202,9 @@ function overlap([a, b], merged) {
   return n;
 }
 
-function timeStats(root) {
+function timeStats(root, since) {
+  const sinceMs = since ? Date.parse(since) : 0;
+  const pointsOf = (path) => activityOf(path).filter((p) => p.t >= sinceMs);
   const dir = transcriptsDir(root);
   const phases = Object.fromEntries(["스펙", "검토", "구현", "구현 중 테스트", "테스트", "조율"].map((k) => [k, { runs: 0, ms: 0 }]));
   if (!existsSync(dir)) return { phases, found: false };
@@ -206,7 +222,9 @@ function timeStats(root) {
       } catch {
         // meta 없음
       }
-      const t = agentTime(activityOf(join(subDir, sub)));
+      const points = pointsOf(join(subDir, sub));
+      if (points.length === 0) continue;
+      const t = agentTime(points);
       agentSpans.push([t.start, t.end]);
       const phase = phaseOf(roleOf(meta.agentType), meta.description);
       if (!phase) continue;
@@ -223,7 +241,7 @@ function timeStats(root) {
   // 리드: 짧은 틈만 일한 시간으로 보고, 에이전트가 돌던 구간은 뺀다
   const busy = mergeIntervals(agentSpans);
   for (const file of leadFiles) {
-    const points = activityOf(file);
+    const points = pointsOf(file);
     for (let i = 0; i < points.length - 1; i += 1) {
       const span = [points[i].t, points[i + 1].t];
       if (span[1] - span[0] > LEAD_IDLE_MS) continue;
@@ -284,12 +302,26 @@ function verdictOf(text) {
   return "기타";
 }
 
-function debateStats(conyDir) {
+// 검토 원문은 파일 이름 앞의 시각(YYYYMMDD-HHMM)으로, ADR은 board.mjs --decision 기록 시각으로 구간을 가른다.
+function debateStats(conyDir, since, events) {
+  const stamp = (name) => {
+    const m = /^(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})/.exec(name);
+    return m ? `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}` : null;
+  };
+  const recorded = new Set(events.filter((e) => e.type === "decision").map((e) => e.file?.split("/").at(-1)));
+  // 파일 이름의 시각은 이 컴퓨터 시간대라서 since 도 같은 시간대로 바꿔 비교한다
+  const local = since ? new Date(Date.parse(since) - new Date(since).getTimezoneOffset() * 60_000).toISOString().slice(0, 16) : null;
+  const inRange = (folder, name) => {
+    if (!since) return true;
+    if (folder === "decisions") return recorded.has(name);
+    const t = stamp(name);
+    return Boolean(t && t >= local);
+  };
   const list = (folder, skip = /^$/) => {
     const dir = join(conyDir, folder);
     return existsSync(dir)
       ? readdirSync(dir)
-          .filter((n) => n.endsWith(".md") && !skip.test(n))
+          .filter((n) => n.endsWith(".md") && !skip.test(n) && inRange(folder, n))
           .map((n) => readFileSync(join(dir, n), "utf8"))
       : [];
   };
@@ -323,16 +355,18 @@ function peopleStats(conyDir) {
   );
 }
 
-export function computeStats(root) {
+export function computeStats(root, { since } = {}) {
   const conyDir = join(root, ".cony");
-  const events = readEvents(conyDir);
+  const all = readEvents(conyDir);
+  const events = since ? all.filter((e) => e.ts >= since) : all;
   return {
-    cost: costStats(root),
-    time: timeStats(root),
+    since: since ?? null,
+    cost: costStats(root, since),
+    time: timeStats(root, since),
     flow: flowStats(events),
     hooks: hookStats(events),
-    debate: debateStats(conyDir),
-    people: peopleStats(conyDir),
+    debate: debateStats(conyDir, since, events),
+    people: since ? null : peopleStats(conyDir),
     generatedAt: new Date().toISOString(),
   };
 }

@@ -25,6 +25,7 @@ const ci = process.env.FAKE_CI ?? "pass";
 const [a, b] = args;
 if (a === "repo") { console.log("main"); process.exit(0); }
 if (a === "pr" && b === "view" && args.includes("mergeCommit")) { console.log("abcdef1234567"); process.exit(0); }
+if (a === "pr" && b === "view" && args.includes("state") && args.includes("-q")) { console.log(pr?.state ?? ""); process.exit(0); }
 if (a === "pr" && b === "view") { if (!pr) process.exit(1); console.log(JSON.stringify(pr)); process.exit(0); }
 if (a === "pr" && b === "create") { fs.writeFileSync(state, JSON.stringify({ number: 7, url: "https://github.com/x/y/pull/7", state: "OPEN" })); console.log("https://github.com/x/y/pull/7"); process.exit(0); }
 if (a === "pr" && b === "checks" && args.includes("--watch")) {
@@ -38,8 +39,18 @@ if (a === "pr" && b === "checks") {
 }
 if (a === "pr" && b === "merge") {
   // 원격에서 머지된 것처럼 작업 브랜치를 origin/main 에 올린다(squash 와 내용은 같다).
-  require("child_process").execFileSync("git", ["push", "-q", "origin", "HEAD:main"], { stdio: "ignore" });
+  const { execFileSync } = require("child_process");
+  execFileSync("git", ["push", "-q", "origin", "HEAD:main"], { stdio: "ignore" });
   fs.writeFileSync(state, JSON.stringify({ ...pr, state: "MERGED" }));
+  // 진짜 gh 처럼 --delete-branch 면 로컬도 기본 브랜치로 바꾼다. 못 바꾸면 머지는 됐어도 실패로 끝난다.
+  if (args.includes("--delete-branch")) {
+    try {
+      execFileSync("git", ["checkout", "-q", "main"], { stdio: "pipe" });
+    } catch (error) {
+      process.stderr.write(String(error.stderr));
+      process.exit(1);
+    }
+  }
   process.exit(0);
 }
 process.exit(0);

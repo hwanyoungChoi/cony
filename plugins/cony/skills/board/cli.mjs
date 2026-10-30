@@ -255,8 +255,8 @@ function timeLines(time, barW) {
   return out;
 }
 
-function renderStats(root) {
-  const s = computeStats(root);
+function renderStats(root, since) {
+  const s = computeStats(root, { since });
   const w = termWidth();
   const c = s.cost;
   const hookTotal = Object.values(s.hooks).reduce((sum, d) => sum + Object.values(d).reduce((a, b) => a + b, 0), 0);
@@ -279,7 +279,10 @@ function renderStats(root) {
     else tileLines.push(t);
   }
   const out = [
-    bold(`지표 · ${basename(root)}`) + dim(c.found ? `  ${c.since?.slice(0, 10) ?? "?"}부터` : "  (대화 기록 없음, 비용 지표 비어 있음)"),
+    bold(`지표 · ${basename(root)}`) +
+      (since
+        ? fg("4C6EF5")(`  ${localTime(since)}부터만`)
+        : dim(c.found ? `  ${c.since?.slice(0, 10) ?? "?"}부터` : "  (대화 기록 없음, 비용 지표 비어 있음)")),
     "",
     ...tileLines,
     "",
@@ -308,12 +311,13 @@ function renderStats(root) {
       ["검토 판정 찬성 · 조건부 · 반대", `${d.verdicts.찬성} · ${d.verdicts.조건부} · ${d.verdicts.반대}`],
       ["사람에게 넘긴 문서", d.handoffs],
     ]),
-    "",
-    bold("사람 개입") + dim(" (log.md)"),
-    `  ${Object.entries(s.people).map(([k, v]) => `${dim(k)} ${bold(String(v))}`).join("   ")}`,
-    "",
-    bold("hook이 막은 횟수"),
   );
+  if (s.people) {
+    out.push("", bold("사람 개입") + dim(" (log.md)"), `  ${Object.entries(s.people).map(([k, v]) => `${dim(k)} ${bold(String(v))}`).join("   ")}`);
+  } else {
+    out.push("", dim("사람 개입은 log.md 에 줄마다 날짜가 없어 구간 보기에서 뺐다"));
+  }
+  out.push("", bold("hook이 막은 횟수"));
   const hooks = Object.entries(s.hooks);
   if (!hooks.length) out.push(dim("  아직 없음"));
   for (const [hook, byDecision] of hooks) {
@@ -322,12 +326,36 @@ function renderStats(root) {
   return out.join("\n");
 }
 
+// "--since 2026-10-28" 또는 "--since 2026-10-28 09:00"(이 컴퓨터 시간대) → ISO(UTC)
+function parseSince(args) {
+  const i = args.indexOf("--since");
+  if (i < 0) return undefined;
+  const date = args[i + 1] ?? "";
+  const time = /^\d{1,2}:\d{2}$/.test(args[i + 2] ?? "") ? args[i + 2] : "00:00";
+  const m = /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{1,2}:\d{2}))?$/.exec(date);
+  const at = m ? new Date(`${m[1]}T${(m[2] ?? time).padStart(5, "0")}`) : null;
+  if (!at || Number.isNaN(at.getTime())) {
+    console.error(`cony: --since 는 2026-10-28 또는 2026-10-28 09:00 형식입니다 (받은 값: "${date}")`);
+    process.exit(1);
+  }
+  return at.toISOString();
+}
+
+function localTime(iso) {
+  const d = new Date(iso);
+  const two = (n) => String(n).padStart(2, "0");
+  const time = d.getHours() || d.getMinutes() ? ` ${two(d.getHours())}:${two(d.getMinutes())}` : "";
+  return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}${time}`;
+}
+
 // ── 실행 ───────────────────────────────────────────────────
 const HELP = `cony — 터미널에서 보는 cony 보드와 지표
 
   cony board [--all]   칸반, 확인 필요·막힌 것, 최근 결정 (--all: 백로그 목록까지)
   cony stats           역할별 토큰, 과정별 시간, 흐름, 토론, 사람 개입, hook 차단
-  cony watch [stats]   바뀔 때마다 다시 그린다 (Ctrl+C 로 끝)
+  cony stats --since 2026-10-28 [09:00]
+                       그 시각 뒤만 센다 (규칙을 바꾼 뒤 효과를 이전과 따로 볼 때)
+  cony watch [stats]   바뀔 때마다 다시 그린다 (Ctrl+C 로 끝, --since 도 된다)
 
 cony 프로젝트(.cony/ 가 있는 폴더) 안에서 실행한다.`;
 
@@ -342,7 +370,8 @@ if (!root) {
   process.exit(1);
 }
 
-const views = { board: () => renderBoard(root, { all: rest.includes("--all") }), stats: () => renderStats(root) };
+const since = parseSince(rest);
+const views = { board: () => renderBoard(root, { all: rest.includes("--all") }), stats: () => renderStats(root, since) };
 
 if (command === "watch") {
   const view = views[rest[0] === "stats" ? "stats" : "board"];

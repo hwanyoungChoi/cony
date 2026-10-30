@@ -95,6 +95,17 @@ test("stats: 대화 기록이 없어도 지표를 그린다", () => {
   assert.match(r.stdout, /과정별 시간/);
 });
 
+test("stats --since: 구간을 머리에 보여주고, 날짜 없는 사람 개입은 뺐다고 알린다", () => {
+  const dir = project();
+  const r = run(dir, ["stats", "--since", "2026-10-28", "09:30"]);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /2026-10-28 09:30부터만/);
+  assert.match(r.stdout, /사람 개입은 log\.md 에 줄마다 날짜가 없어/);
+  const bad = run(dir, ["stats", "--since", "어제"]);
+  assert.notEqual(bad.status, 0);
+  assert.match(bad.stderr, /2026-10-28 09:00 형식/);
+});
+
 test("cony 프로젝트 밖이면 알려주고 실패한다", () => {
   const r = run(base, ["board"]);
   assert.notEqual(r.status, 0);

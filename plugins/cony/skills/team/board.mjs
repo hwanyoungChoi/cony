@@ -294,6 +294,8 @@ if (problems.length) {
   appendFileSync(logPath, `${existsSync(logPath) ? "\n" : ""}${lines}\n`);
 }
 if (values.status) logEvent(root, { type: "status", status: board.status });
+// 지표의 구간 보기에서 결정이 언제 났는지 알려고 남긴다
+for (const rel of values.decision ?? []) logEvent(root, { type: "decision", file: rel });
 
 const tasks = board.sections["태스크"].split("\n").filter((l) => TASK_LINE.test(l));
 const count = (pattern) => tasks.filter((l) => pattern.test(l)).length;

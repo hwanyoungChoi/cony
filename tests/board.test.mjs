@@ -215,6 +215,7 @@ describe("board.mjs", () => {
     const text = read(dir, "board.md");
     const lines = text.split("\n").filter((l) => l.includes("ADR-001"));
     assert.deepEqual(lines, ["- [ADR-001 연산 순서](decisions/001-precedence.md): 우선순위 적용"]);
+    assert.equal(events(dir).filter((e) => e.type === "decision" && e.file === "decisions/001-precedence.md").length, 2, "지표의 구간 보기용으로 남긴다");
   });
 
   test("확인 필요·막힌 것은 목록으로, none 이면 없음", () => {

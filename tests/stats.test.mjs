@@ -114,3 +114,58 @@ test("과정별 시간: 머리표·역할로 과정을 가르고, 구현 중 테
   assert.equal(min(phases.조율.ms), 1.5);
   assert.equal(phases.테스트.ms, 0);
 });
+
+test("since: 그 시각 뒤의 토큰·시간·이벤트·검토·결정만 세고, 날짜 없는 log.md는 뺀다", () => {
+  const root = join(base, "proj-since");
+  for (const d of ["metrics", "reviews", "decisions"]) mkdirSync(join(root, ".cony", d), { recursive: true });
+  const dir = join(base, "transcripts", root.replace(/[^A-Za-z0-9]/g, "-"));
+  mkdirSync(join(dir, "s1", "subagents"), { recursive: true });
+  const u = { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 };
+  const user = (ts) => JSON.stringify({ type: "user", timestamp: ts, message: { content: [] } });
+  writeFileSync(
+    join(dir, "s1.jsonl"),
+    [
+      assistant("old", "m", u, "2026-10-27T01:00:00.000Z"),
+      assistant("new", "m", u, "2026-10-29T01:00:00.000Z"),
+      user("2026-10-29T01:01:00.000Z"),
+    ].join("\n"),
+  );
+  // 전부 since 전에 돈 qa 실행은 빠지고, 뒤에 돈 fe 실행만 남는다
+  writeFileSync(join(dir, "s1", "subagents", "agent-qa.jsonl"), [assistant("q", "m", u, "2026-10-27T02:00:00.000Z"), user("2026-10-27T02:05:00.000Z")].join("\n"));
+  writeFileSync(join(dir, "s1", "subagents", "agent-qa.meta.json"), JSON.stringify({ agentType: "cony:qa" }));
+  writeFileSync(join(dir, "s1", "subagents", "agent-fe.jsonl"), [assistant("f", "m", u, "2026-10-29T02:00:00.000Z"), user("2026-10-29T02:04:00.000Z")].join("\n"));
+  writeFileSync(join(dir, "s1", "subagents", "agent-fe.meta.json"), JSON.stringify({ agentType: "cony:fe", description: "[구현] task 1" }));
+  writeFileSync(
+    join(root, ".cony", "metrics", "events.jsonl"),
+    [
+      { ts: "2026-10-27T03:00:00.000Z", type: "hook", hook: "lint-on-edit", decision: "block" },
+      { ts: "2026-10-29T03:00:00.000Z", type: "hook", hook: "guard-secrets", decision: "deny" },
+      { ts: "2026-10-29T03:00:00.000Z", type: "decision", file: "decisions/002-new.md" },
+    ]
+      .map((e) => JSON.stringify(e))
+      .join("\n"),
+  );
+  writeFileSync(join(root, ".cony", "decisions", "001-old.md"), "# ADR-001\n- 상태: 채택\n");
+  writeFileSync(join(root, ".cony", "decisions", "002-new.md"), "# ADR-002\n- 상태: 채택\n- 의견: qa(반대, 근거)\n");
+  writeFileSync(join(root, ".cony", "reviews", "20261020-1000-qa-spec-x.md"), "판정: 반대\n");
+  writeFileSync(join(root, ".cony", "reviews", "20261030-1000-qa-spec-x.md"), "판정: 찬성\n");
+  writeFileSync(join(root, ".cony", "log.md"), "- 요청: a\n");
+
+  const s = computeStats(root, { since: "2026-10-28T00:00:00.000Z" });
+  assert.equal(s.cost.byRole["리드"].calls, 1);
+  assert.equal(s.cost.byRole.qa, undefined);
+  assert.equal(s.cost.byRole.fe.runs, 1);
+  assert.equal(s.cost.since, "2026-10-29T01:00:00.000Z");
+  assert.equal(s.time.phases.테스트.runs, 0);
+  assert.equal(s.time.phases.구현.ms, 4 * 60_000);
+  assert.deepEqual(s.hooks, { "guard-secrets": { deny: 1 } });
+  assert.equal(s.debate.adrs, 1, "board.mjs --decision 기록이 since 뒤인 ADR만");
+  assert.equal(s.debate.adrsWithDissent, 1);
+  assert.deepEqual(s.debate.verdicts, { 찬성: 1, 조건부: 0, 반대: 0, 기타: 0 });
+  assert.equal(s.people, null);
+
+  const all = computeStats(root);
+  assert.equal(all.cost.byRole["리드"].calls, 2);
+  assert.equal(all.debate.adrs, 2);
+  assert.equal(all.people.요청, 1);
+});

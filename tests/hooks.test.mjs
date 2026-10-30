@@ -310,6 +310,37 @@ describe("context-on-stop: 긴 리드 세션", () => {
   });
 });
 
+describe("skill-update-on-prompt: 오래 켜 둔 리드에 바뀐 지침 알림", () => {
+  const becomeLead = (project, session_id) =>
+    runHook("guard-bash.mjs", { session_id, cwd: project, tool_input: { command: 'node "/plugin/skills/team/board.mjs" --now x' } });
+  const installed = JSON.parse(readFileSync(new URL("../plugins/cony/.claude-plugin/plugin.json", import.meta.url), "utf8")).version;
+  // 팀 스킬을 version 으로 불러온 대화 기록
+  const transcript = (project, version) => {
+    const path = join(project, `skill-${version}.jsonl`);
+    const text = `Base directory for this skill: /u/.claude/plugins/cache/conychoi-plugins/cony/${version}/skills/team\n\n# cony 팀`;
+    writeFileSync(path, `${JSON.stringify({ type: "user", message: { content: [{ type: "text", text }] } })}\n`);
+    return path;
+  };
+  const prompt = (project, session_id, version) =>
+    runHook("skill-update-on-prompt.mjs", { session_id, cwd: project, transcript_path: transcript(project, version) });
+
+  test("예전 버전 지침으로 일하는 리드에게 한 번만 다시 읽으라고 알린다", () => {
+    const project = createProject();
+    becomeLead(project, "skill-1");
+    const out = prompt(project, "skill-1", "0.18.1");
+    assert.match(out.hookSpecificOutput.additionalContext, new RegExp(`0\\.18\\.1 지침.*설치된 cony는 ${installed.replace(/\./g, "\\.")}`));
+    assert.match(out.hookSpecificOutput.additionalContext, /skills\/team\/SKILL\.md 를 Read로 다시 읽고/);
+    assert.equal(prompt(project, "skill-1", "0.18.1"), null, "같은 세션에는 다시 알리지 않는다");
+  });
+
+  test("최신 지침을 불러온 리드, 리드가 아닌 세션은 그냥 둔다", () => {
+    const project = createProject();
+    becomeLead(project, "skill-2");
+    assert.equal(prompt(project, "skill-2", installed), null);
+    assert.equal(prompt(project, "skill-viewer", "0.10.0"), null);
+  });
+});
+
 describe("board-on-stop / board-on-end: 보드 상태", () => {
   // 리드 = 이 세션에서 board.mjs 를 실행했거나 board.md 를 고친 세션
   const becomeLead = (project, session_id) =>

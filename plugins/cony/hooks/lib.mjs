@@ -107,7 +107,7 @@ export function leadRoots(sessionId) {
 
 export function forgetSession(sessionId) {
   if (!sessionId) return;
-  for (const kind of ["edited", "lead", "board-stop-at", "context-warned", "touched"]) rmSync(sessionFile(sessionId, kind), { force: true });
+  for (const kind of ["edited", "lead", "board-stop-at", "context-warned", "touched", "skill-version"]) rmSync(sessionFile(sessionId, kind), { force: true });
 }
 
 export function sessionRoots(input) {
@@ -158,15 +158,16 @@ function newerInstall(self) {
   const m = self.match(/^(.*[\\/]plugins[\\/]cache[\\/][^\\/]+[\\/]cony)[\\/]([^\\/]+)[\\/](skills[\\/].+)$/);
   if (!m) return null;
   const [, base, current, rel] = m;
-  const parse = (v) => v.split(".").map(Number);
-  const compare = (a, b) => {
-    const [x, y] = [parse(a), parse(b)];
-    for (let i = 0; i < Math.max(x.length, y.length); i += 1) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) - (y[i] ?? 0);
-    return 0;
-  };
   const latest = readdirSync(base)
     .filter((v) => /^\d+(\.\d+)*$/.test(v) && existsSync(join(base, v, rel)))
-    .sort(compare)
+    .sort(compareVersions)
     .at(-1);
-  return latest && compare(latest, current) > 0 ? join(base, latest, rel) : null;
+  return latest && compareVersions(latest, current) > 0 ? join(base, latest, rel) : null;
+}
+
+// "0.9.0" < "0.10.0" 처럼 숫자로 비교한다
+export function compareVersions(a, b) {
+  const [x, y] = [a, b].map((v) => v.split(".").map(Number));
+  for (let i = 0; i < Math.max(x.length, y.length); i += 1) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) - (y[i] ?? 0);
+  return 0;
 }
