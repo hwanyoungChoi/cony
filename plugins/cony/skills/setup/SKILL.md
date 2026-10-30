@@ -160,6 +160,16 @@ jobs:
 - `gh repo edit --delete-branch-on-merge`로 머지된 작업 브랜치가 자동으로 지워지게 한다.
 - 개인 계정의 private 저장소는 무료 플랜에서 브랜치 보호(필수 체크)를 쓸 수 없다. 그래도 cony hook이 `gh pr merge` 직전에 CI 결과를 확인해서 통과하지 않은 PR의 머지를 막는다.
 
+## 7-1. 에이전트 팀 (선택)
+
+`team.json`의 `mode`를 `teams`로 쓰려면 Claude Code의 에이전트 팀 기능이 켜져 있어야 한다. 프로젝트 `.claude/settings.json`에 넣는다(이미 있으면 `env`에 합친다). 사용자 설정(`~/.claude/settings.json`)에 `"subagentPromptCacheTtl": "1h"`를 두면 팀원 요청의 캐시가 5분이 아니라 1시간 유지돼 토큰이 덜 든다. 둘 다 사용자가 확인하고 넣는다.
+
+```json
+{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" } }
+```
+
+이 변수가 켜지면 이름을 붙인 서브에이전트가 전부 팀원으로 뜬다. 끄려면 값을 `"0"`으로 둔다.
+
 ## 7. 권한 허용 목록
 
 팀이 자율로 일하는 동안 검증, 커밋, push, PR 명령마다 권한 확인 창이 뜨지 않게, `.claude/settings.json`에 허용 목록을 둔다. 이미 있으면 `permissions.allow`에 합친다. `{pm}`은 패키지 매니저로 바꾼다.

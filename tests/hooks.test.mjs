@@ -352,6 +352,56 @@ describe("skill-update-on-prompt: 오래 켜 둔 리드에 바뀐 지침 알림"
   });
 });
 
+describe("teammate-idle: 팀 모드에서 기록 파일 없이 쉬는 팀원", () => {
+  const boardWith = (project, lines) =>
+    writeFileSync(join(project, ".cony", "board.md"), `# 기능\n> 상태: 진행 중 · 마지막 업데이트: 2026-10-30 10:00\n\n## 태스크\n${lines.join("\n")}\n`);
+  const idle = (project, session_id, teammate_name) => {
+    const r = spawnSync("node", [join(HOOKS, "teammate-idle.mjs")], {
+      input: JSON.stringify({ session_id, cwd: project, teammate_name }),
+      encoding: "utf8",
+      env: { ...process.env, TMPDIR: hookTmp },
+    });
+    return { status: r.status, stderr: r.stderr };
+  };
+  const record = (project, role, n) => {
+    mkdirSync(join(project, ".cony", "reviews"), { recursive: true });
+    writeFileSync(join(project, ".cony", "reviews", `20261030-1000-${role}-task-${n}.md`), "# 기록\n");
+  };
+
+  test("fe의 PROGRESS 태스크에 기록 파일이 없으면 돌려보내고, 쓰면 쉬게 둔다", () => {
+    const project = createProject();
+    boardWith(project, ["- [ ] 1. 화면 [PROGRESS · fe]", "- [ ] 2. API [PROGRESS · be]"]);
+    const blocked = idle(project, "ti-1", "fe");
+    assert.equal(blocked.status, 2);
+    assert.match(blocked.stderr, /태스크 1이 PROGRESS\(담당 fe\).*기록 파일.*fe-task-1\.md/);
+    assert.match(blocked.stderr, /qa에게 SendMessage/);
+    record(project, "fe", 1);
+    assert.equal(idle(project, "ti-1", "fe").status, 0);
+    assert.equal(idle(project, "ti-1", "cony:be").status, 2, "cony:be 도 be 로 본다");
+  });
+
+  test("qa는 REVIEW 태스크에 qa 기록이 없으면 돌려보낸다. pm과 모르는 이름은 그냥 둔다", () => {
+    const project = createProject();
+    boardWith(project, ["- [ ] 1. 화면 [REVIEW · qa]"]);
+    assert.equal(idle(project, "ti-2", "qa").status, 2);
+    assert.equal(idle(project, "ti-2", "pm").status, 0);
+    assert.equal(idle(project, "ti-2", "researcher").status, 0);
+    record(project, "qa", 1);
+    assert.equal(idle(project, "ti-2", "qa").status, 0);
+  });
+
+  test("같은 태스크로는 두 번까지만 돌려보내고 기록을 남긴다", () => {
+    const project = createProject();
+    boardWith(project, ["- [ ] 3. 저장 [PROGRESS · be]"]);
+    assert.equal(idle(project, "ti-3", "be").status, 2);
+    assert.equal(idle(project, "ti-3", "be").status, 2);
+    assert.equal(idle(project, "ti-3", "be").status, 0, "세 번째는 쉬게 둔다");
+    const events = readFileSync(join(project, ".cony", "metrics", "events.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
+    assert.equal(events.filter((e) => e.type === "teammate_idle" && e.teammate === "be").length, 3);
+    assert.deepEqual(events.filter((e) => e.hook === "teammate-idle").map((e) => e.decision), ["block", "block", "allow-after-max"]);
+  });
+});
+
 describe("board-on-stop / board-on-end: 보드 상태", () => {
   // 리드 = 이 세션에서 board.mjs 를 실행했거나 board.md 를 고친 세션
   const becomeLead = (project, session_id) =>

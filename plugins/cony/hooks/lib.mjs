@@ -107,7 +107,7 @@ export function leadRoots(sessionId) {
 
 export function forgetSession(sessionId) {
   if (!sessionId) return;
-  for (const kind of ["edited", "lead", "board-stop-at", "context-warned", "touched", "skill-version"]) rmSync(sessionFile(sessionId, kind), { force: true });
+  for (const kind of ["edited", "lead", "board-stop-at", "context-warned", "touched", "skill-version", "teammate-idle"]) rmSync(sessionFile(sessionId, kind), { force: true });
 }
 
 export function sessionRoots(input) {
@@ -116,8 +116,12 @@ export function sessionRoots(input) {
 }
 
 // .cony/team.json. 없거나 깨졌으면 기본값(전원 build, 결정 team, 머지 auto)
+// 팀원을 어떻게 띄우나. "subagents": 리드가 부르고 결과를 받아 중계한다. "teams": 에이전트 팀으로 띄워 팀원끼리 직접 대화한다.
+// 기본값을 바꾸려면 이 상수 하나와 skills/team/SKILL.md 의 "mode" 표만 고친다.
+export const DEFAULT_TEAM_MODE = "subagents";
+
 export function readTeamConfig(root) {
-  const defaults = { pm: "build", fe: "build", be: "build", qa: "build", decisions: "team", merge: "auto" };
+  const defaults = { pm: "build", fe: "build", be: "build", qa: "build", decisions: "team", merge: "auto", mode: DEFAULT_TEAM_MODE };
   try {
     return { ...defaults, ...JSON.parse(readFileSync(join(root, ".cony", "team.json"), "utf8")) };
   } catch {
