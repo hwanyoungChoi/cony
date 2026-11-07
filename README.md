@@ -27,7 +27,7 @@ claude plugin install development@conychoi-plugins   # 같은 이름의 플러�
 
 1. **토론으로 결정한다.** 리드(메인 세션)가 pm의 제안을 fe·be·qa에게 검토시키고, 근거를 따져 결정한다. 결정은 ADR로, 검토 의견은 원문 그대로 남는다.
 2. **칸반으로 진행한다.** 태스크는 TODO → PROGRESS → REVIEW → DONE으로 움직인다. qa 검증에 실패하면 PROGRESS로 돌아간다.
-3. **hook이 지킨다.** force push, CI 통과 전 머지, 지침 파일 수정, 비밀 파일 읽기, lint 오류를 막는다.
+3. **hook이 지킨다.** force push, CI 통과 전 머지, 형식이 틀린 커밋·PR 제목, 지침 파일 수정, 비밀 파일 읽기, lint 오류를 막는다.
 4. **사람은 보고를 받는다.** 보드나 폰으로 지켜보다가, 머지 완료와 확인할 결정을 보고받는다.
 
 ## 진행 상황 보기
@@ -200,6 +200,7 @@ hook은 `.cony/`가 있는 프로젝트에서만 동작하고, 다른 프로젝�
 - 비밀 파일(`.env`, `.dev.vars`, 키 파일) 읽기. 예시 파일은 허용한다.
 - `--no-verify`, `--amend`, force push
 - CI가 통과하지 않은 PR 머지, `merge` 설정을 넘어서는 push·PR·머지
+- 영문 prefix(`feat:` `fix:` `refactor:` `docs:` `chore:`) + 한글 본문이 아닌 커밋·PR 제목(`git commit -m`, `gh pr create·edit --title`, `ship.mjs --title`). `development:commit-message` 스킬과 같은 규칙이다.
 - 단계 건너뛰기. qa 기록과 커밋 없이는 태스크를 DONE으로 옮길 수 없다(`--skip-reason`으로 넘기면 기록이 남는다).
 - "사용자 확인 필요"가 남은 채로 보드를 "완료"로 바꾸기. 답을 받았는지, 기다리는지, 미룰지 정해야 한다.
 
@@ -251,7 +252,7 @@ hook은 `.cony/`가 있는 프로젝트에서만 동작하고, 다른 프로젝�
 | `cony` | 하네스: 에이전트, hook, team·board·status·setup 스킬 | 이 저장소 |
 | `development` | `commit-message`, `code-review-fe`, `spec-review` 스킬 | [my-plugins](https://github.com/hwanyoungChoi/my-plugins) |
 
-- 팀은 기획서가 있으면 `spec-review`를 쓴다. 컨벤션 검사는 fe·be의 자체 점검과 qa의 지목으로 하고, 커밋 메시지는 리드가 같은 형식(영문 prefix + 한글 본문)으로 바로 쓴다. `code-review-fe`·`commit-message`를 팀 흐름에서 부르게 했을 때, 하나는 diff를 리드로 끌어들였고 하나는 한 번도 쓰이지 않았다.
+- 팀은 기획서가 있으면 `spec-review`를 쓴다. 컨벤션 검사는 fe·be의 자체 점검과 qa의 지목으로 하고, 커밋 메시지는 리드가 같은 형식(영문 prefix + 한글 본문)으로 바로 쓰고, `guard-bash` hook과 `ship.mjs`가 커밋·PR 제목 형식을 검사한다(PR 제목이 squash 머지 커밋 제목이 되는데 prefix가 빠진 채 머지된 일이 있었다). `code-review-fe`·`commit-message`를 팀 흐름에서 부르게 했을 때, 하나는 diff를 리드로 끌어들였고 하나는 한 번도 쓰이지 않았다.
 - `development`는 my-plugins 저장소를 가리키기만 한다. 스킬은 거기서 고친다.
 - 같은 이름(`development`)의 플러그인을 이미 쓰는 컴퓨터에는 설치하지 않는다. 스킬 이름이 겹친다.
 

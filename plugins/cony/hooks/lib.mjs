@@ -175,3 +175,16 @@ export function compareVersions(a, b) {
   for (let i = 0; i < Math.max(x.length, y.length); i += 1) if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) - (y[i] ?? 0);
   return 0;
 }
+
+// 커밋·PR 제목 형식. development:commit-message 스킬과 같은 규칙이다(영문 prefix + 한글 본문).
+// 리드가 스킬을 부르지 않고 직접 쓰다 prefix를 빠뜨려(모기지핏 PR #70·#73, squash 커밋 제목 = PR 제목) hook·ship.mjs가 같이 검사한다.
+export const COMMIT_TYPES = ["feat", "fix", "refactor", "docs", "chore"];
+const SUBJECT_PATTERN = new RegExp(`^(${COMMIT_TYPES.join("|")}): \\S`);
+
+/** 제목 한 줄이 형식에 맞으면 null, 아니면 이유 */
+export function commitSubjectProblem(subject) {
+  const line = subject.trim();
+  if (!SUBJECT_PATTERN.test(line)) return `"${line}" — 영문 prefix(${COMMIT_TYPES.map((t) => `${t}:`).join(" ")}) + 공백으로 시작해야 합니다.`;
+  if (!/[가-힣]/.test(line)) return `"${line}" — prefix 뒤 본문은 한글로 씁니다.`;
+  return null;
+}

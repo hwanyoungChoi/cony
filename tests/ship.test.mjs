@@ -114,7 +114,7 @@ const ghLog = (p) => (existsSync(`${p.state}.log`) ? readFileSync(`${p.state}.lo
 
 test("auto: push → PR → CI 통과 → 머지 → 기본 브랜치로 돌아와 최신을 받는다", () => {
   const p = project();
-  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  const r = ship(p, ["--title", "feat: 기능", "--body-file", ".cony/body.md"]);
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /ship: PR #7/);
   assert.match(r.stdout, /ship: CI 통과 \(verify\)/);
@@ -128,7 +128,7 @@ test("auto: push → PR → CI 통과 → 머지 → 기본 브랜치로 돌아�
 
 test("추적되는 보드를 ship이 고쳐도 머지 뒤 기본 브랜치로 돌아오고, 보드·이벤트 기록이 남는다", () => {
   const p = project({}, { tracked: true });
-  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  const r = ship(p, ["--title", "feat: 기능", "--body-file", ".cony/body.md"]);
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /ship: 머지됨 abcdef1 · main 최신으로 받음/);
   assert.equal(git(p.dir, "branch", "--show-current"), "main");
@@ -150,7 +150,7 @@ test("머지 뒤 기본 브랜치를 최신으로 받지 못하면 머지는 기
   git(p.dir, "add", "c.txt");
   git(p.dir, "commit", "-q", "-m", "로컬에만");
   git(p.dir, "switch", "-q", "feat");
-  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  const r = ship(p, ["--title", "feat: 기능", "--body-file", ".cony/body.md"]);
   assert.notEqual(r.status, 0);
   assert.match(r.stderr, /머지됨 abcdef1 · 그런데 main로 돌아오지 못했습니다/);
   assert.match(r.stderr, /fast-forward/i);
@@ -161,7 +161,7 @@ test("머지 뒤 기본 브랜치를 최신으로 받지 못하면 머지는 기
 
 test("CI가 실패하면 머지하지 않고 실패한 검사를 알려준다", () => {
   const p = project();
-  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"], { FAKE_CI: "fail" });
+  const r = ship(p, ["--title", "feat: 기능", "--body-file", ".cony/body.md"], { FAKE_CI: "fail" });
   assert.notEqual(r.status, 0);
   assert.match(r.stderr, /CI 실패 — verify https:\/\/ci\/1/);
   assert.doesNotMatch(ghLog(p), /pr merge/);
@@ -170,7 +170,7 @@ test("CI가 실패하면 머지하지 않고 실패한 검사를 알려준다", 
 
 test("CI가 없으면 머지하지 않는다", () => {
   const p = project();
-  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"], { FAKE_CI: "none" });
+  const r = ship(p, ["--title", "feat: 기능", "--body-file", ".cony/body.md"], { FAKE_CI: "none" });
   assert.notEqual(r.status, 0);
   assert.match(r.stderr, /CI가 없습니다/);
   assert.doesNotMatch(ghLog(p), /pr merge/);
@@ -178,7 +178,7 @@ test("CI가 없으면 머지하지 않는다", () => {
 
 test('merge "pr"이면 CI 통과까지만 하고 멈춘다', () => {
   const p = project({ merge: "pr" });
-  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  const r = ship(p, ["--title", "feat: 기능", "--body-file", ".cony/body.md"]);
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /머지는 사용자가 합니다/);
   assert.doesNotMatch(ghLog(p), /pr merge/);
@@ -187,7 +187,7 @@ test('merge "pr"이면 CI 통과까지만 하고 멈춘다', () => {
 
 test('merge "none"이면 push 하지 않는다', () => {
   const p = project({ merge: "none" });
-  const r = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  const r = ship(p, ["--title", "feat: 기능", "--body-file", ".cony/body.md"]);
   assert.notEqual(r.status, 0);
   assert.match(r.stderr, /사용자가 합니다/);
   assert.equal(git(join(p.dir, "..", "origin.git"), "branch", "--list", "feat"), "");
@@ -196,15 +196,23 @@ test('merge "none"이면 push 하지 않는다', () => {
 test("기본 브랜치에서, 또는 커밋하지 않은 변경이 있으면 실행하지 않는다", () => {
   const p = project();
   writeFileSync(join(p.dir, "b.txt"), "changed\n");
-  const dirty = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  const dirty = ship(p, ["--title", "feat: 기능", "--body-file", ".cony/body.md"]);
   assert.notEqual(dirty.status, 0);
   assert.match(dirty.stderr, /커밋하지 않은 변경/);
 
   git(p.dir, "checkout", "-q", "--", "b.txt");
   git(p.dir, "switch", "-q", "main");
-  const onMain = ship(p, ["--title", "기능", "--body-file", ".cony/body.md"]);
+  const onMain = ship(p, ["--title", "feat: 기능", "--body-file", ".cony/body.md"]);
   assert.notEqual(onMain.status, 0);
   assert.match(onMain.stderr, /기본 브랜치\(main\)/);
+});
+
+test("PR 제목에 영문 prefix가 없으면 push 전에 멈춘다", () => {
+  const p = project();
+  const r = ship(p, ["--title", "인테리어 모두 접기", "--body-file", ".cony/body.md"]);
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /PR 제목 형식/);
+  assert.doesNotMatch(r.stdout, /push/);
 });
 
 test("PR이 이미 있으면 다시 만들지 않고 그 PR로 대기·머지한다", () => {
@@ -226,7 +234,7 @@ test("플러그인 캐시의 예전 버전으로 불리면 설치된 최신 버�
   writeFileSync(join(cony, "0.21.0", "skills", "team", "ship.mjs"), readFileSync(SCRIPT));
   writeFileSync(join(cony, "0.21.1", "skills", "team", "ship.mjs"), 'console.log("latest", process.argv.slice(2).join(" "));\nprocess.exit(3);\n');
 
-  const r = spawnSync("node", [join(cony, "0.21.0", "skills", "team", "ship.mjs"), "--title", "기능"], { encoding: "utf8" });
+  const r = spawnSync("node", [join(cony, "0.21.0", "skills", "team", "ship.mjs"), "--title", "feat: 기능"], { encoding: "utf8" });
   assert.equal(r.status, 3);
-  assert.equal(r.stdout.trim(), "latest --title 기능");
+  assert.equal(r.stdout.trim(), "latest --title feat: 기능");
 });

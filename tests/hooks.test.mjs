@@ -187,11 +187,44 @@ describe("guard-bash: 위험 명령", () => {
     writeFileSync(join(localProject, ".cony", "team.json"), JSON.stringify({ merge: "none" }));
     assert.equal(bash("git push -u origin HEAD", { cwd: localProject }), "deny");
     assert.equal(bash("gh pr create --fill", { cwd: localProject }), "deny");
-    assert.equal(bash("git commit -m 'feat: x'", { cwd: localProject }), "allow");
+    assert.equal(bash("git commit -m 'feat: 기능 추가'", { cwd: localProject }), "allow");
   });
 
   test("CI 실패면 머지 차단", () =>
     assert.equal(bash("gh pr merge 1 --squash", { env: { FAKE_GH_STATUS: "1" } }), "deny"));
+});
+
+describe("guard-bash: 커밋·PR 제목 형식", () => {
+  const project = createProject();
+  const bash = (command) => decisionOf(runHook("guard-bash.mjs", { cwd: project, tool_input: { command } }));
+  const heredoc = (subject) => `git commit -m "$(cat <<'EOF'\n${subject}\n\n- 본문\nEOF\n)"`;
+
+  for (const command of [
+    `git commit -m "feat: 모두 접기 버튼 추가"`,
+    `git add -A && git commit -qm 'fix: 접힘 저장 실패 처리'`,
+    `git commit --message="docs: 보고서 갱신"`,
+    heredoc("refactor: 저장소 쓰기 함수 분리"),
+    String.raw`git commit -m "chore: \"lint\" 설정 정리"`,
+    `git commit -F msg.txt`,
+    `git commit --no-edit`,
+    `gh pr create --title "feat: 모두 접기 버튼" --body x`,
+    `gh pr create --fill`,
+    `gh pr edit 74 --add-label ui`,
+  ]) {
+    test(`허용: ${command.split("\n")[0]}`, () => assert.equal(bash(command), "allow"));
+  }
+
+  for (const command of [
+    `git commit -m "인테리어 묶음 접기·펴기"`,
+    `git commit -qm 'feature: 접기 추가'`,
+    `git commit -m "feat:접기 추가"`,
+    `git commit -m "feat: add collapse all"`,
+    heredoc("인테리어 묶음 접기·펴기"),
+    `gh pr create --title "인테리어 [모두 접기]/[모두 펴기]" --body x`,
+    `gh pr edit 74 -t "모두 접기"`,
+  ]) {
+    test(`차단: ${command.split("\n")[0]}`, () => assert.equal(bash(command), "deny"));
+  }
 });
 
 describe("lint-on-edit: 수정 즉시 lint", () => {

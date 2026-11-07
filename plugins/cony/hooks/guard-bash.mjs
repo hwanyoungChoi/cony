@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 
-import { expandHome, findConyRoot, logEvent, output, readInput, readTeamConfig, rememberRoot, truncate } from "./lib.mjs";
+import { commitSubjectProblem, expandHome, findConyRoot, logEvent, output, readInput, readTeamConfig, rememberRoot, truncate } from "./lib.mjs";
 
 const PROTECTED_BRANCHES = new Set(["main", "master"]);
 
@@ -85,6 +85,40 @@ const ASK = [
 
 for (const [pattern, reason] of DENY) {
   if (pattern.test(normalized)) decide("deny", reason);
+}
+
+// 커밋 메시지·PR 제목의 첫 줄을 꺼낸다. `-m "..."`·`-qm '...'`·`--message=...`·`--title "..."`와
+// `"$(cat <<'EOF'` heredoc(첫 줄은 그다음 줄)을 읽는다. `-F`·`--fill`처럼 명령에 글이 없으면 null(검사하지 않는다).
+function firstLineAfter(flagPattern, text) {
+  const match = text.match(flagPattern);
+  if (!match) return null;
+  const rest = text.slice(match.index + match[0].length);
+  const heredoc = rest.match(/^["']?\$\(cat\s+<<-?\s*['"]?\w+['"]?[^\n]*\n/);
+  if (heredoc) return rest.slice(heredoc[0].length).split("\n").find((l) => l.trim() !== "") ?? "";
+  // 따옴표로 감쌌으면 이스케이프되지 않은 닫는 따옴표까지, 아니면 공백 전까지가 메시지다
+  const quote = rest[0];
+  let message;
+  if (quote === '"' || quote === "'") {
+    const close = rest.slice(1).search(quote === '"' ? /(?<!\\)"/ : /'/);
+    message = close === -1 ? rest.slice(1) : rest.slice(1, close + 1);
+  } else {
+    message = rest.split(/\s/)[0];
+  }
+  return message.split("\n").find((l) => l.trim() !== "") ?? "";
+}
+
+const SKILL_HINT = "development:commit-message 스킬 규칙(영문 prefix + 한글 본문, 50자 이내)으로 다시 쓰세요. 문서(.cony/ 포함)와 코드가 섞이면 docs:·feat: 커밋을 나눕니다.";
+const commitStart = normalized.search(/\bgit\s+commit\b/);
+if (commitStart !== -1) {
+  const subject = firstLineAfter(/\s(?:-[a-zA-Z]*m\s*|--message[= ]\s*)/, normalized.slice(commitStart));
+  const problem = subject === null ? null : commitSubjectProblem(subject);
+  if (problem) decide("deny", `커밋 제목 형식: ${problem}\n${SKILL_HINT}`);
+}
+const prStart = normalized.search(/\bgh\s+pr\s+(create|edit)\b/);
+if (prStart !== -1) {
+  const title = firstLineAfter(/\s(?:-t\s*|--title[= ]\s*)/, normalized.slice(prStart));
+  const problem = title === null ? null : commitSubjectProblem(title);
+  if (problem) decide("deny", `PR 제목 형식(squash 머지 커밋 제목이 됩니다): ${problem}\n${SKILL_HINT}`);
 }
 
 // team.json 의 merge 설정: auto(팀이 머지) | pr(PR까지만, 머지는 사람) | none(커밋까지만, push·PR도 사람)

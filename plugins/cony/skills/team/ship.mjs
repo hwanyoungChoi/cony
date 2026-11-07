@@ -2,13 +2,14 @@
 // 작업 브랜치를 push → PR → CI 대기 → (merge 설정에 따라) 머지까지 하고, 단계마다 한 줄만 출력한다.
 // 리드가 git·gh 명령과 CI 출력을 대화에 쌓지 않게 하려고 만들었다(모기지핏 리드 대화의 약 28%가 Bash 명령과 출력).
 //
-//   새 PR:     node ship.mjs --title "기능 이름" --body-file .cony/reports/20261028-feature.md
+//   새 PR:     node ship.mjs --title "feat: 기능 이름" --body-file .cony/reports/20261028-feature.md
 //   다시:      node ship.mjs            (CI를 고쳐 push한 뒤, 이 브랜치의 PR로 다시 대기·머지)
 //
 // hook은 이 스크립트 안의 git·gh 호출을 보지 못하므로, hook이 지키던 규칙을 여기서 같이 지킨다.
 //   - team.json merge: none 이면 push 하지 않는다. pr 이면 CI 통과까지만 하고 멈춘다. auto 면 머지한다.
 //   - 기본 브랜치에서는 실행하지 않는다. 커밋하지 않은 변경(.cony/ 제외)이 있으면 실행하지 않는다.
 //   - CI가 없거나 하나라도 실패하면 머지하지 않는다.
+//   - PR 제목은 커밋 제목과 같은 형식(영문 prefix + 한글 본문)이어야 한다(squash 머지 커밋 제목이 된다).
 // CI를 기다리느라 오래 걸리므로 백그라운드로 실행한다.
 
 import { execFileSync, spawnSync } from "node:child_process";
@@ -17,7 +18,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
-import { findConyRoot, logEvent, readTeamConfig, runNewerInstall } from "../../hooks/lib.mjs";
+import { commitSubjectProblem, findConyRoot, logEvent, readTeamConfig, runNewerInstall } from "../../hooks/lib.mjs";
 
 runNewerInstall(import.meta.url);
 
@@ -51,6 +52,11 @@ const conyRoot = findConyRoot(process.cwd());
 if (!conyRoot) fail(".cony/ 를 찾을 수 없습니다. cony 프로젝트에서 실행하세요.");
 const { merge } = readTeamConfig(conyRoot);
 if (merge === "none") fail('team.json 의 merge 가 "none"입니다. push·PR·머지는 사용자가 합니다.');
+
+if (values.title !== undefined) {
+  const problem = commitSubjectProblem(values.title);
+  if (problem) fail(`PR 제목 형식(squash 머지 커밋 제목이 됩니다): ${problem}`);
+}
 
 const branch = run("git", ["branch", "--show-current"]);
 const base =
